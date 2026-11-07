@@ -1,22 +1,4 @@
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: reel-factory-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: reel_factory
-      POSTGRES_USER: reel_factory
-      POSTGRES_PASSWORD: reel_factory_dev
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U reel_factory -d reel_factory"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   redis:
     image: redis:7-alpine
     container_name: reel-factory-redis
@@ -39,13 +21,10 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+psycopg://reel_factory:reel_factory_dev@postgres:5432/reel_factory
       REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -62,5 +41,4 @@ services:
       - api
 
 volumes:
-  postgres_data:
   redis_data:
