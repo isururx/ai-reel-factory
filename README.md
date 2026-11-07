@@ -1,28 +1,17 @@
 # AI Reel Factory
 
-An AI-assisted content intelligence and short-form video production platform. The first milestone focuses on a single-page local MVP: page profile, strategy, script generation, and human script approval. Video generation and Meta publishing are intentionally deferred until the core workflow is reliable.
+An AI-assisted content intelligence and short-form video production platform. M1 establishes Page configuration and strategy foundations; script generation, video production and Meta publishing follow in later milestones.
 
 ## Architecture
+- Frontend: Next.js App Router + TypeScript
+- API: FastAPI + Pydantic
+- Database: PostgreSQL (pgvector when semantic retrieval is introduced)
+- ORM and migrations: SQLAlchemy 2.0 + Alembic
+- Background jobs: Redis + Celery (introduced with asynchronous workflows)
+- Production: Piper TTS + FFmpeg + pluggable video-generation worker
+- Publishing: Meta Graph API behind server-side approval gates
 
-- **Frontend:** Next.js App Router + TypeScript
-- **API:** FastAPI + Pydantic
-- **Database:** PostgreSQL (pgvector will be enabled when semantic retrieval is introduced)
-- **Background jobs:** Redis + Celery (added when asynchronous workflows are introduced)
-- **Production:** Piper TTS + FFmpeg + pluggable video-generation worker
-- **Publishing:** Meta Graph API integration, behind server-side approval gates
-
-## Repository layout
-
-```text
-backend/       FastAPI application and tests
-frontend/      Next.js dashboard
-infrastructure Docker Compose and local infrastructure config
-docs/          Architecture decisions and implementation notes
-scripts/       Developer utilities
-```
-
-## Quick start (backend)
-
+## Backend quick start
 Requirements: Python 3.11+
 
 ```bash
@@ -31,32 +20,31 @@ python -m venv .venv
 # Windows PowerShell: .venv\\Scripts\\Activate.ps1
 # macOS/Linux: source .venv/bin/activate
 pip install -e '.[dev]'
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-API health check: http://localhost:8000/health  
-Interactive API docs: http://localhost:8000/docs
+Health: http://localhost:8000/health | API docs: http://localhost:8000/docs
 
-## Quick start (full stack)
-
-1. Copy `.env.example` to `.env` and update local values.
+## Full stack
+1. Copy `.env.example` to `.env`.
 2. Run `docker compose up --build`.
-3. Backend: http://localhost:8000; frontend: http://localhost:3000.
+3. Apply migrations: `docker compose exec api alembic upgrade head`.
+4. Open the frontend at http://localhost:3000.
 
-The initial frontend is a placeholder until the first dashboard milestone is implemented.
+## API v1
+- `POST /api/v1/pages` — create a Page.
+- `GET /api/v1/pages` and `GET /api/v1/pages/{page_id}` — list/retrieve Pages.
+- `GET/PUT /api/v1/pages/{page_id}/profile` — retrieve or upsert a Page profile.
+- `POST/GET /api/v1/pages/{page_id}/strategies` — create/list strategies.
+- `GET /api/v1/pages/{page_id}/strategies/{strategy_id}/versions` — list strategy versions.
 
 ## Product principles
+1. Each Page has isolated profiles, strategies, scripts, analytics and credentials.
+2. Human approval is required for scripts and final videos.
+3. Editing an approved artifact invalidates its approval.
+4. Publishing validates approval against the exact immutable video version.
+5. GPU jobs are budget-capped, measurable and shut down when idle.
+6. Use original content and properly licensed assets.
 
-1. One Page first; design the data model for multiple Pages.
-2. Each Page has isolated profiles, strategies, scripts, analytics, and credentials.
-3. Human approval is required for scripts and final videos.
-4. Editing an approved artifact invalidates its approval.
-5. Publishing must validate approval server-side against the exact immutable video version.
-6. GPU jobs are budget-capped, measurable, and shut down when idle.
-7. Prefer original content and properly licensed assets; do not copy other creators' videos.
-
-## Current milestone
-
-**M0 — Project foundation:** repository scaffold, local API, frontend shell, and Docker-based PostgreSQL/Redis services.
-
-Next: implement database models and migrations for Pages, page profiles, strategies, scripts, script versions, and approval events.
+**M1 — Data foundation:** SQLAlchemy models, Alembic initial migration, Page/profile/strategy APIs and SQLite-backed API tests. Authentication and production tenant authorization are not enabled yet; these endpoints support the single-owner local MVP.
