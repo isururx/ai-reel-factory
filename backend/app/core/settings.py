@@ -1,10 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     app_name: str = "AI Reel Factory API"
     app_env: str = "development"
     database_url: str = "sqlite:///./reel_factory.db"
     redis_url: str = "redis://localhost:6379/0"
+    frontend_origin: str = "http://localhost:3000"
     r2_account_id: str | None = None
     r2_access_key_id: str | None = None
     r2_secret_access_key: str | None = None
@@ -21,5 +23,6 @@ class Settings(BaseSettings):
     @property
     def r2_endpoint_url(self) -> str | None:
         return f"https://{self.r2_account_id}.r2.cloudflarestorage.com" if self.r2_account_id else None
+
 
 settings = Settings()
