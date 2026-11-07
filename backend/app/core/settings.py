@@ -11,7 +11,12 @@ class Settings(BaseSettings):
     r2_bucket_name: str | None = None
     r2_public_base_url: str | None = None
 
-    model_config = SettingsConfigDict(env_file=(".env", "../.env"), extra="ignore", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env"),
+        env_ignore_empty=True,
+        extra="ignore",
+        case_sensitive=False,
+    )
 
     @property
     def r2_endpoint_url(self) -> str | None:
