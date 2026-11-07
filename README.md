@@ -60,9 +60,14 @@ Docker Compose runs Redis locally; PostgreSQL is managed by Supabase.
 ## API v1
 - POST /api/v1/pages — create a Page.
 - GET /api/v1/pages and GET /api/v1/pages/{page_id} — list/retrieve Pages.
+- PATCH /api/v1/pages/{page_id} — update Page details or activate/deactivate it.
+- DELETE /api/v1/pages/{page_id} — delete a Page and its dependent records.
 - GET/PUT /api/v1/pages/{page_id}/profile — retrieve or upsert a Page profile.
 - POST/GET /api/v1/pages/{page_id}/strategies — create/list strategies.
-- GET /api/v1/pages/{page_id}/strategies/{strategy_id}/versions — list strategy versions.
+- PATCH /api/v1/pages/{page_id}/strategies/{strategy_id} — update strategy metadata/status.
+- GET/POST /api/v1/pages/{page_id}/strategies/{strategy_id}/versions — list or append an immutable configuration version.
+
+M2 endpoints extend the initial M1 Page workspace with Page lifecycle management and append-only strategy versions. These routes are still single-owner development endpoints: do not expose them publicly until Supabase Auth and server-side authorization are implemented.
 
 ## Product principles
 1. Each Page has isolated profiles, strategies, scripts, analytics and credentials.
@@ -72,4 +77,6 @@ Docker Compose runs Redis locally; PostgreSQL is managed by Supabase.
 5. GPU jobs are budget-capped, measurable and shut down when idle.
 6. Use original content and properly licensed assets.
 
-M1: SQLAlchemy models, Alembic initial migration, Page/profile/strategy APIs and SQLite-backed API tests. Supabase connectivity is configured through DATABASE_URL; Supabase Auth and production tenant authorization are not enabled yet.
+M1: SQLAlchemy models, Alembic initial migration, Page/profile/strategy APIs and SQLite-backed API tests. Supabase connectivity is configured through DATABASE_URL.
+
+M2 (in progress): multi-Page lifecycle endpoints, Page-specific profile and strategy management, append-only strategy version creation, and API regression tests. Supabase Auth and production tenant authorization remain required before public deployment.
