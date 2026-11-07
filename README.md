@@ -1,14 +1,13 @@
 # AI Reel Factory
 
-An AI-assisted content intelligence and short-form video production platform. M1 establishes Page configuration and strategy foundations; script generation, video production and Meta publishing follow in later milestones.
+An AI-assisted content intelligence and short-form video production platform. M1 establishes Page configuration and strategy foundations; M2 adds multi-Page management.
 
 ## Architecture
 - Frontend: Next.js App Router + TypeScript
 - API: FastAPI + Pydantic
 - Database: Supabase-managed PostgreSQL
 - ORM and migrations: SQLAlchemy 2.0 + Alembic
-- Authentication: Supabase Auth (planned; not yet enforced by M1 API routes)
-- Vector search: pgvector in Supabase (enable when semantic retrieval is introduced)
+- Authentication: Supabase Auth (planned; not yet enforced by API routes)
 - Object storage: Cloudflare R2 through its S3-compatible API
 - Background jobs: Redis + Celery (introduced with asynchronous workflows)
 - Production: Piper TTS + FFmpeg + pluggable video-generation worker
@@ -16,22 +15,18 @@ An AI-assisted content intelligence and short-form video production platform. M1
 
 ## Supabase setup
 1. Create a Supabase project.
-2. In Project Settings → Database → Connection string, select the Session Pooler.
-3. Copy the connection string into the root .env as DATABASE_URL.
+2. In Supabase Project Settings → Database → Connect, select Session Pooler.
+3. Copy the connection string into the repository-root .env as DATABASE_URL.
 4. Change the URI scheme to postgresql+psycopg:// and retain ?sslmode=require.
 5. URL-encode special characters in the database password.
-6. Never commit .env or expose the database password to the browser.
-
-Use the Session Pooler for this SQLAlchemy application. It supports the application's connection pooling and is suitable for normal Alembic migration workflows. Avoid the Transaction Pooler for Alembic migrations. Supabase Auth is planned, but M1 remains a single-owner development API until authentication and Page-level authorization are implemented.
+6. Never commit .env or expose database credentials to the browser.
 
 ## Cloudflare R2 setup
-1. Create an R2 bucket, for example ai-reel-factory.
+1. Create an R2 bucket.
 2. Create an R2 API token with Object Read & Write access scoped to that bucket.
-3. Add the Account ID, Access Key ID, Secret Access Key and bucket name to .env.
-4. Keep generated videos private by default and issue short-lived presigned URLs for previews.
-5. Store only the R2 object key and asset metadata in PostgreSQL.
-
-The S3-compatible endpoint is https://<ACCOUNT_ID>.r2.cloudflarestorage.com. Never expose R2 credentials through NEXT_PUBLIC variables or commit them to Git.
+3. Add Account ID, Access Key ID, Secret Access Key and bucket name to .env.
+4. Keep generated videos private and use short-lived presigned URLs.
+5. Never expose R2 credentials through NEXT_PUBLIC variables or commit them to Git.
 
 ## Backend quick start
 Requirements: Python 3.11+
@@ -45,29 +40,35 @@ Requirements: Python 3.11+
     python -m alembic upgrade head
     python -m uvicorn app.main:app --reload
 
-For local development, settings load backend/.env or the repository-root .env. Copy .env.example to the repository root and configure Supabase and R2. Tests use isolated in-memory SQLite and do not require a live Supabase connection.
+Tests use isolated in-memory SQLite and do not require a live Supabase connection.
 
-Health: http://localhost:8000/health | API docs: http://localhost:8000/docs
+## Frontend quick start
+    cd frontend
+    npm install
+    npm run dev
 
-## Full stack
-1. Copy .env.example to .env and configure Supabase and R2.
-2. Run docker compose up --build.
-3. Apply migrations: docker compose exec api python -m alembic upgrade head.
-4. Open the frontend at http://localhost:3000.
+Set NEXT_PUBLIC_API_BASE_URL only if your FastAPI API is not at http://127.0.0.1:8000/api/v1. For example:
 
-Docker Compose runs Redis locally; PostgreSQL is managed by Supabase.
+    NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
 
-## API v1
+The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localhost:3000) and http://127.0.0.1:3000 during local development.
+
+## Local URLs
+- Dashboard: http://localhost:3000
+- API docs: http://127.0.0.1:8000/docs
+- Health: http://127.0.0.1:8000/health
+
+## Page management API
 - POST /api/v1/pages — create a Page.
 - GET /api/v1/pages and GET /api/v1/pages/{page_id} — list/retrieve Pages.
-- PATCH /api/v1/pages/{page_id} — update Page details or activate/deactivate it.
+- PATCH /api/v1/pages/{page_id} — update Page details or active status.
 - DELETE /api/v1/pages/{page_id} — delete a Page and its dependent records.
 - GET/PUT /api/v1/pages/{page_id}/profile — retrieve or upsert a Page profile.
 - POST/GET /api/v1/pages/{page_id}/strategies — create/list strategies.
 - PATCH /api/v1/pages/{page_id}/strategies/{strategy_id} — update strategy metadata/status.
-- GET/POST /api/v1/pages/{page_id}/strategies/{strategy_id}/versions — list or append an immutable configuration version.
+- GET/POST /api/v1/pages/{page_id}/strategies/{strategy_id}/versions — list or append strategy versions.
 
-M2 endpoints extend the initial M1 Page workspace with Page lifecycle management and append-only strategy versions. These routes are still single-owner development endpoints: do not expose them publicly until Supabase Auth and server-side authorization are implemented.
+**Security status:** These are currently single-owner development APIs without Supabase Auth or user authorization. Do not expose the dashboard or API publicly until authentication and Page-level authorization are implemented.
 
 ## Product principles
 1. Each Page has isolated profiles, strategies, scripts, analytics and credentials.
@@ -76,7 +77,3 @@ M2 endpoints extend the initial M1 Page workspace with Page lifecycle management
 4. Publishing validates approval against the exact immutable video version.
 5. GPU jobs are budget-capped, measurable and shut down when idle.
 6. Use original content and properly licensed assets.
-
-M1: SQLAlchemy models, Alembic initial migration, Page/profile/strategy APIs and SQLite-backed API tests. Supabase connectivity is configured through DATABASE_URL.
-
-M2 (in progress): multi-Page lifecycle endpoints, Page-specific profile and strategy management, append-only strategy version creation, and API regression tests. Supabase Auth and production tenant authorization remain required before public deployment.
