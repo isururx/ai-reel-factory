@@ -22,5 +22,7 @@ app/models/strategy.py
 app/schemas/__init__.py
 app/schemas/pages.py
 app/schemas/strategies.py
+app/storage/__init__.py
+app/storage/r2.py
 tests/test_health.py
 tests/test_pages.py
