@@ -181,7 +181,7 @@ export default function StrategiesPage() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Content strategies</h1>
             <p className="mt-2 text-sm text-slate-400">Build a distinct, versioned content playbook for every Page.</p>
           </div>
-          <div className="flex items-center gap-3"><AuthActions /><a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">← Back to Pages</a></div>
+          <div className="flex flex-wrap items-center gap-2"><AuthActions /><a href="/trends" className="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm text-cyan-200 hover:bg-cyan-400/10">Trend discovery</a><a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">← Back to Pages</a></div>
         </header>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
