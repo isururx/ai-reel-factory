@@ -1,6 +1,6 @@
 "use client";
 
-import AuthActions from "@/components/AuthActions";
+import AppShell, { GenerationOverlay, LoadingSkeleton } from "@/components/AppShell";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
@@ -167,11 +167,13 @@ export default function TrendsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#080d18] text-slate-100">
+    <AppShell active="trends">
+    {busyId !== null && <GenerationOverlay /> }
+    <main className="min-h-screen bg-transparent text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
         <header className="mb-9 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">AI REEL FACTORY · M5</p>
+            <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">CONTENT INTELLIGENCE</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Trend discovery</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">Collect stories from RSS feeds and discover which ideas fit each content brand.</p>
           </div>
@@ -217,7 +219,7 @@ export default function TrendsPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0 flex-1">
               <label htmlFor="trend-page" className="mb-2 block text-xs font-medium text-slate-400">Recommendations for Page</label>
-              {loading ? <p className="text-sm text-slate-400">Loading Pages...</p> : pages.length === 0 ? <p className="text-sm text-amber-200">Create a Page workspace before collecting recommendations.</p> :
+              {loading ? <LoadingSkeleton rows={2} /> : pages.length === 0 ? <p className="text-sm text-amber-200">Create a Page workspace before collecting recommendations.</p> :
                 <select id="trend-page" value={pageId} onChange={(e) => setPageId(Number(e.target.value))} className="field max-w-lg">
                   {pages.map((page) => <option key={page.id} value={page.id}>{page.name}{page.is_active ? "" : " · Paused"}</option>)}
                 </select>}
@@ -268,5 +270,6 @@ export default function TrendsPage() {
         <footer className="mt-14 border-t border-white/10 pt-5 text-xs text-slate-600">AI Reel Factory · Trend scores are heuristic recommendations. Human review remains required.</footer>
       </div>
     </main>
+    </AppShell>
   );
 }
