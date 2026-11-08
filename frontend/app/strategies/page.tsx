@@ -1,5 +1,7 @@
-import { authenticatedFetch } from "@/lib/supabase";
 "use client";
+
+import { authenticatedFetch } from "@/lib/supabase";
+import AuthActions from "@/components/AuthActions";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
@@ -179,7 +181,7 @@ export default function StrategiesPage() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Content strategies</h1>
             <p className="mt-2 text-sm text-slate-400">Build a distinct, versioned content playbook for every Page.</p>
           </div>
-          <a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">← Back to Pages</a>
+          <div className="flex items-center gap-3"><AuthActions /><a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">← Back to Pages</a></div>
         </header>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
