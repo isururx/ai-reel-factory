@@ -1,5 +1,7 @@
-import { authenticatedFetch } from "@/lib/supabase";
 "use client";
+
+import { authenticatedFetch } from "@/lib/supabase";
+import AuthActions from "@/components/AuthActions";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
@@ -175,7 +177,7 @@ export default function Home() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Page workspace</h1>
             <p className="mt-2 text-sm text-slate-400">Manage your content brands from one place.</p>
           </div>
-          <div className="flex items-center gap-3"><a href="/strategies" className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs text-cyan-200 transition hover:bg-cyan-400/20">Content strategies →</a><div className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-4 py-2 text-xs text-cyan-200">M2 · Multi-Page management</div></div>
+          <div className="flex items-center gap-3"><AuthActions /><a href="/strategies" className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs text-cyan-200 transition hover:bg-cyan-400/20">Content strategies →</a><div className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-4 py-2 text-xs text-cyan-200">M2 · Multi-Page management</div></div>
         </header>
 
         <section className="mb-8 grid gap-3 sm:grid-cols-3">
