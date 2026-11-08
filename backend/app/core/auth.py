@@ -37,6 +37,8 @@ def get_current_user(
         detail="A valid Supabase access token is required.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not settings.supabase_url:
+        raise HTTPException(status_code=503, detail="Supabase Auth is not configured.")
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise unauthorized
 
