@@ -37,10 +37,14 @@ def get_current_user(
         detail="A valid Supabase access token is required.",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if not settings.supabase_url:
-        raise HTTPException(status_code=503, detail="Supabase Auth is not configured.")
+
+    # Missing credentials are always an authentication failure, regardless
+    # of whether Supabase is configured in this environment.
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise unauthorized
+
+    if not settings.supabase_url:
+        raise HTTPException(status_code=503, detail="Supabase Auth is not configured.")
 
     try:
         signing_key = _jwks_client().get_signing_key_from_jwt(credentials.credentials)
