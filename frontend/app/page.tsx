@@ -2,6 +2,7 @@
 
 import { authenticatedFetch } from "@/lib/supabase";
 import AppShell, { LoadingSkeleton } from "@/components/AppShell";
+import AuthActions from "@/components/AuthActions";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
