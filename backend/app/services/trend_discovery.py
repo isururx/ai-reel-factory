@@ -1,4 +1,6 @@
+import ipaddress
 import re
+import socket
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -82,6 +84,14 @@ def _score_for_page(title: str, summary: str, niche: str, audience: str, publish
     return score, ". ".join(reasons)
 
 
+def _public_feed_host(hostname: str) -> bool:
+    try:
+        addresses = {item[4][0] for item in socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)}
+        return bool(addresses) and all(ipaddress.ip_address(address).is_global for address in addresses)
+    except (OSError, ValueError):
+        return False
+
+
 def collect_rss_feeds(db: Session, owner_id: str, feed_urls: list[str]) -> dict:
     pages = list(db.scalars(select(Page).where(Page.owner_id == owner_id, Page.is_active.is_(True))).all())
     profiles = {
@@ -94,12 +104,15 @@ def collect_rss_feeds(db: Session, owner_id: str, feed_urls: list[str]) -> dict:
 
     for feed_url in feed_urls:
         parsed = urlparse(feed_url)
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             errors.append({"feed_url": feed_url, "error": "Only HTTP(S) feed URLs are allowed."})
+            continue
+        if not _public_feed_host(parsed.hostname):
+            errors.append({"feed_url": feed_url, "error": "Feed host must resolve to public IP addresses."})
             continue
         try:
             response = httpx.get(
-                feed_url, timeout=12.0, follow_redirects=True,
+                feed_url, timeout=12.0, follow_redirects=False,
                 headers={"User-Agent": "AI-Reel-Factory/0.1"},
             )
             response.raise_for_status()
@@ -140,7 +153,7 @@ def collect_rss_feeds(db: Session, owner_id: str, feed_urls: list[str]) -> dict:
                         ))
                     elif rec.status == "suggested":
                         rec.score, rec.rationale = score, rationale
-        except (httpx.HTTPError, ET.ParseError, ValueError) as exc:
+        except (httpx.HTTPError, ET.ParseError, ValueError, OSError) as exc:
             errors.append({"feed_url": feed_url, "error": str(exc)[:300]})
     db.commit()
     return {
