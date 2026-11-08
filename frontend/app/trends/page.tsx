@@ -1,6 +1,7 @@
 "use client";
 
 import AppShell, { GenerationOverlay, LoadingSkeleton } from "@/components/AppShell";
+import AuthActions from "@/components/AuthActions";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
@@ -63,6 +64,8 @@ export default function TrendsPage() {
   const [loading, setLoading] = useState(true);
   const [collecting, setCollecting] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -108,9 +111,10 @@ export default function TrendsPage() {
       setItems([]);
       return;
     }
-    void loadRecommendations(pageId, filter).catch((e) =>
-      setError(e instanceof Error ? e.message : "Could not load recommendations.")
-    );
+    setRecommendationsLoading(true);
+    void loadRecommendations(pageId, filter)
+      .catch((e) => setError(e instanceof Error ? e.message : "Could not load recommendations."))
+      .finally(() => setRecommendationsLoading(false));
   }, [pageId, filter, loadRecommendations]);
 
   async function collect(event: FormEvent<HTMLFormElement>) {
@@ -140,12 +144,12 @@ export default function TrendsPage() {
   }
 
   async function generateScripts(item: Recommendation) {
-    setBusyId(item.id); setError(""); setNotice("");
+    setBusyId(item.id); setGenerating(true); setError(""); setNotice("");
     try {
       await api(`/pages/${item.page_id}/trends/${item.id}/generate-scripts`, { method: "POST" });
       window.location.assign("/scripts");
     } catch (e) { setError(e instanceof Error ? e.message : "Could not generate scripts."); }
-    finally { setBusyId(null); }
+    finally { setBusyId(null); setGenerating(false); }
   }
 
   async function updateStatus(item: Recommendation, status: Filter) {
@@ -168,7 +172,7 @@ export default function TrendsPage() {
 
   return (
     <AppShell active="trends">
-    {busyId !== null && <GenerationOverlay /> }
+    {generating && <GenerationOverlay /> }
     <main className="min-h-screen bg-transparent text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
         <header className="mb-9 flex flex-wrap items-center justify-between gap-4">
@@ -239,6 +243,7 @@ export default function TrendsPage() {
             <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-400">{items.length} shown</span>
           </div>
           {pageId === "" ? <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500">Create a Page workspace to get started.</div> :
+            recommendationsLoading ? <div className="grid gap-4 xl:grid-cols-2"><div className="skeleton-card space-y-4"><div className="skeleton-line w-1/3"/><div className="skeleton-line h-5 w-4/5"/><div className="skeleton-line h-3 w-full"/><div className="skeleton-line h-3 w-5/6"/><div className="skeleton-line h-20 w-full rounded-xl"/></div><div className="skeleton-card space-y-4"><div className="skeleton-line w-1/3"/><div className="skeleton-line h-5 w-4/5"/><div className="skeleton-line h-3 w-full"/><div className="skeleton-line h-3 w-5/6"/><div className="skeleton-line h-20 w-full rounded-xl"/></div></div> :
             items.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center"><p className="font-medium">No {filter} ideas yet</p><p className="mt-2 text-sm text-slate-500">Collect a few feeds above. Ideas will appear here when they match this Page's profile.</p></div> :
             <div className="grid gap-4 xl:grid-cols-2">
               {items.map((item) => (
