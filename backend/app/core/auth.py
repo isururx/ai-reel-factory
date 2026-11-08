@@ -45,7 +45,7 @@ def get_current_user(
         claims = jwt.decode(
             credentials.credentials,
             signing_key.key,
-            algorithms=["ES256", "RS256"],
+            algorithms=["ES256", "RS256", "EdDSA"],
             audience=settings.supabase_jwt_audience,
             issuer=f"{settings.supabase_url.rstrip('/')}/auth/v1",
             options={"require": ["exp", "sub", "iss", "aud"]},
