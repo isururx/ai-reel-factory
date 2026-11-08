@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.pages import router as pages_router
 from app.api.routes.strategies import router as strategies_router
 from app.api.routes.trends import router as trends_router
+from app.api.routes.scripts import router as scripts_router
 from app.core.settings import settings
 
 app = FastAPI(
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(pages_router, prefix="/api/v1")
 app.include_router(strategies_router, prefix="/api/v1")
 app.include_router(trends_router, prefix="/api/v1")
+app.include_router(scripts_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["system"])

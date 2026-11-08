@@ -88,3 +88,13 @@ The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localh
 - The initial score is a transparent heuristic based on keyword overlap and freshness; it is a triage aid, not a prediction of virality.
 - Apply the new schema with `python -m alembic upgrade head` from the backend directory.
 - Google Trends, Reddit and YouTube can be connected in later adapters. For now, use their official RSS feeds where available; no scraping or private competitor analytics are used.
+
+
+## M6 AI script generation
+- Select a Page-specific trend recommendation in `/trends`, then generate three distinct script variations.
+- Review and edit drafts in `/scripts`. Editing creates an immutable new version; approval applies only to the exact version.
+- The API loads the Page profile and active strategy before generation. Human review is required; generated evaluations are preliminary and do not replace fact-checking.
+- Configure `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.5-flash-lite`, and `GEMINI_API_KEY` in the repository-root `.env`. Never expose the key to the frontend or commit `.env`.
+- To use another OpenAI-compatible provider later, set `LLM_PROVIDER=openai-compatible`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_BASE_URL` (base URL should omit `/chat/completions`).
+- Install backend dependencies with `pip install -e ".[dev]"`; no database migration is required for M6.
+- Routes: `POST /api/v1/pages/{page_id}/trends/{recommendation_id}/generate-scripts`, `GET /api/v1/pages/{page_id}/scripts`, `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions`, and `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions/{version_id}/decision`.
