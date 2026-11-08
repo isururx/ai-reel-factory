@@ -209,7 +209,7 @@ export default function Home() {
             <div><h2 className="text-xl font-semibold">Your Pages</h2><p className="mt-1 text-sm text-slate-500">Each Page has its own profile and content strategy.</p></div>
             <button onClick={() => { setLoading(true); void loadPages(); }} className="text-xs text-cyan-300 hover:text-cyan-200">Refresh ↻</button>
           </div>
-          {loading ? <div className="grid gap-3 md:grid-cols-2"><div className="skeleton-card"><div className="skeleton-line w-1/3" /><div className="skeleton-line mt-5 h-8 w-1/2" /></div><div className="skeleton-card"><div className="skeleton-line w-1/3" /><div className="skeleton-line mt-5 h-8 w-1/2" /></div></div><div className="mt-4"><LoadingSkeleton rows={3} /></div> :
+          {loading ? <><div className="grid gap-3 md:grid-cols-2"><div className="skeleton-card"><div className="skeleton-line w-1/3" /><div className="skeleton-line mt-5 h-8 w-1/2" /></div><div className="skeleton-card"><div className="skeleton-line w-1/3" /><div className="skeleton-line mt-5 h-8 w-1/2" /></div></div><div className="mt-4"><LoadingSkeleton rows={3} /></div></> :
             pages.length === 0 ? <div className="rounded-2xl border border-dashed border-white/15 p-10 text-center"><p className="font-medium">No Pages yet</p><p className="mt-2 text-sm text-slate-500">Create your first content brand above.</p></div> :
             <div className="grid gap-4 lg:grid-cols-2">
               {pages.map((page) => (
