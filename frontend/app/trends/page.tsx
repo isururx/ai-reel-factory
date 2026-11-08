@@ -139,7 +139,7 @@ export default function TrendsPage() {
     }
   }
 
-  async function updateStatus(item: Recommendation, status: Filter) {
+  async function generateScripts(item: Recommendation) {\n    setBusyId(item.id); setError(""); setNotice("");\n    try {\n      await api(`/pages/${item.page_id}/trends/${item.id}/generate-scripts`, { method: "POST" });\n      window.location.assign("/scripts");\n    } catch (e) { setError(e instanceof Error ? e.message : "Could not generate scripts."); }\n    finally { setBusyId(null); }\n  }\n\n  async function updateStatus(item: Recommendation, status: Filter) {
     setBusyId(item.id);
     setError("");
     setNotice("");
@@ -169,7 +169,7 @@ export default function TrendsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <AuthActions />
             <a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Pages</a>
-            <a href="/strategies" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Strategies</a>
+            <a href="/strategies" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Strategies</a>\n            <a href="/scripts" className="rounded-xl border border-cyan-300/30 px-4 py-2.5 text-sm text-cyan-200 hover:bg-cyan-300/10">Script studio</a>
           </div>
         </header>
 
@@ -245,7 +245,7 @@ export default function TrendsPage() {
                     <a href={item.trend.source_url} target="_blank" rel="noreferrer" className="text-xs text-cyan-300 hover:text-cyan-200">Read original source ↗</a>
                     <div className="flex flex-wrap gap-2">
                       {item.status !== "saved" && <button disabled={busyId === item.id} onClick={() => void updateStatus(item, "saved")} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50">Save</button>}
-                      {item.status !== "selected" && <button disabled={busyId === item.id} onClick={() => void updateStatus(item, "selected")} className="rounded-lg bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50">Select idea</button>}
+                      {item.status !== "selected" && <button disabled={busyId === item.id} onClick={() => void updateStatus(item, "selected")} className="rounded-lg bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50">Select idea</button>}\n                      {item.status === "selected" && <button disabled={busyId === item.id} onClick={() => void generateScripts(item)} className="rounded-lg bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50">{busyId === item.id ? "Generating..." : "Generate 3 scripts ↗"}</button>}
                       {item.status !== "dismissed" && <button disabled={busyId === item.id} onClick={() => void updateStatus(item, "dismissed")} className="rounded-lg px-3 py-2 text-xs text-rose-300 hover:bg-rose-400/10 disabled:opacity-50">Dismiss</button>}
                     </div>
                   </div>
