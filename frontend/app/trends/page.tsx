@@ -181,12 +181,7 @@ export default function TrendsPage() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Trend discovery</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">Collect stories from RSS feeds and discover which ideas fit each content brand.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <AuthActions />
-            <a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Pages</a>
-            <a href="/strategies" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Strategies</a>
-            <a href="/scripts" className="rounded-xl border border-cyan-300/30 px-4 py-2.5 text-sm text-cyan-200 hover:bg-cyan-300/10">Script studio</a>
-          </div>
+          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">LIVE FEED INTELLIGENCE</span>
         </header>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
