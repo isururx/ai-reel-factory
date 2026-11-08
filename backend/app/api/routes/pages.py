@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database.session import get_db
+from app.core.auth import CurrentUser, AuthenticatedUser\nfrom app.database.session import get_db
 from app.models.page import Page, PageProfile
 from app.schemas.pages import PageCreate, PageProfileRead, PageProfileUpsert, PageRead, PageUpdate
 
