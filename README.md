@@ -77,3 +77,14 @@ The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localh
 4. Publishing validates approval against the exact immutable video version.
 5. GPU jobs are budget-capped, measurable and shut down when idle.
 6. Use original content and properly licensed assets.
+
+
+## M5 Trend discovery
+- Collect RSS 2.0 and Atom feeds using `POST /api/v1/trends/collect` with a list of feed URLs.
+- View the account's collected source items with `GET /api/v1/trends`.
+- View Page-specific ranked suggestions with `GET /api/v1/pages/{page_id}/trends`.
+- Save, dismiss or select a suggestion with `PATCH /api/v1/pages/{page_id}/trends/{recommendation_id}` and a status of `saved`, `dismissed` or `selected`.
+- Collection deduplicates source URLs per account and creates separate recommendations using each active Page's niche and audience profile.
+- The initial score is a transparent heuristic based on keyword overlap and freshness; it is a triage aid, not a prediction of virality.
+- Apply the new schema with `python -m alembic upgrade head` from the backend directory.
+- Google Trends, Reddit and YouTube can be connected in later adapters. For now, use their official RSS feeds where available; no scraping or private competitor analytics are used.
