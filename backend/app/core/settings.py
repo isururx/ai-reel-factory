@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     supabase_url: str | None = None
     supabase_jwt_audience: str = "authenticated"
+    llm_provider: str = "gemini"
+    llm_model: str = "gemini-2.5-flash"
+    gemini_api_key: str | None = None
+    llm_api_key: str | None = None
+    llm_base_url: str | None = None
     r2_account_id: str | None = None
     r2_access_key_id: str | None = None
     r2_secret_access_key: str | None = None
