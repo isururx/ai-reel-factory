@@ -121,12 +121,7 @@ export default function ScriptsPage() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight">Script studio</h1>
             <p className="mt-2 text-sm text-slate-400">Review generated variations, inspect their evaluations, and approve the exact version you want to produce.</p>
           </div>
-          <nav className="flex flex-wrap items-center gap-2">
-            <AuthActions />
-            <a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Pages</a>
-            <a href="/trends" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Trends</a>
-            <a href="/strategies" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Strategies</a>
-          </nav>
+          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">HUMAN REVIEW REQUIRED</span>
         </header>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
