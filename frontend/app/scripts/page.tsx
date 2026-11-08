@@ -1,7 +1,6 @@
 "use client";
 
-import AppShell, { LoadingSkeleton } from "@/components/AppShell";
-import AuthActions from "@/components/AuthActions";
+import AppShell from "@/components/AppShell";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useState } from "react";
 
