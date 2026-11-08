@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "@/lib/supabase";
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
@@ -35,7 +36,7 @@ const emptyProfile: Profile = {
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API}${path}`, {
+  const response = await authenticatedFetch(`${API}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
     cache: "no-store",
