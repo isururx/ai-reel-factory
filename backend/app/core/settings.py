@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./reel_factory.db"
     redis_url: str = "redis://localhost:6379/0"
     frontend_origin: str = "http://localhost:3000"
+    supabase_url: str | None = None
+    supabase_jwt_audience: str = "authenticated"
     r2_account_id: str | None = None
     r2_access_key_id: str | None = None
     r2_secret_access_key: str | None = None

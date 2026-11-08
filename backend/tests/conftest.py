@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from app import models  # noqa: F401
 from app.database.base import Base
+from app.core.auth import AuthenticatedUser, get_current_user
 from app.database.session import get_db
 from app.main import app
 @pytest.fixture()
@@ -19,6 +20,7 @@ def client():
         finally:
             db.close()
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser("test-user-0001")
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
