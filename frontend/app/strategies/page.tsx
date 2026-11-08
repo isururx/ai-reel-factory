@@ -1,7 +1,7 @@
 "use client";
 
 import { authenticatedFetch } from "@/lib/supabase";
-import AuthActions from "@/components/AuthActions";
+import AppShell, { LoadingSkeleton } from "@/components/AppShell";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
@@ -173,7 +173,8 @@ export default function StrategiesPage() {
   const selected = strategies.find((item) => item.id === selectedId) ?? null;
 
   return (
-    <main className="min-h-screen bg-[#080d18] text-slate-100">
+    <AppShell active="strategies">
+    <main className="min-h-screen bg-transparent text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -189,7 +190,7 @@ export default function StrategiesPage() {
 
         <section className="mb-6 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
           <label className="mb-2 block text-xs font-medium text-slate-400" htmlFor="page-select">Choose a Page workspace</label>
-          {loading ? <p className="text-sm text-slate-400">Loading Pages...</p> : pages.length === 0 ? <p className="text-sm text-slate-400">Create a Page workspace first.</p> :
+          {loading ? <LoadingSkeleton rows={2} /> : pages.length === 0 ? <p className="text-sm text-slate-400">Create a Page workspace first.</p> :
             <select id="page-select" value={pageId} onChange={(e) => { setPageId(Number(e.target.value)); setSelectedId(null); setVersions([]); }} className="field max-w-md">
               {pages.map((page) => <option key={page.id} value={page.id}>{page.name}{page.is_active ? "" : " · Paused"}</option>)}
             </select>}
@@ -251,5 +252,6 @@ export default function StrategiesPage() {
         <footer className="mt-12 border-t border-white/10 pt-5 text-xs text-slate-600">AI Reel Factory · Each Page owns its own strategy and immutable configuration history.</footer>
       </div>
     </main>
+    </AppShell>
   );
 }
