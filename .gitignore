@@ -34,4 +34,3 @@ outputs/
 *.wav
 *.mp3
 *.log
-.env.example
