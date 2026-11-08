@@ -1,7 +1,6 @@
 "use client";
 
 import AppShell, { GenerationOverlay, LoadingSkeleton } from "@/components/AppShell";
-import AuthActions from "@/components/AuthActions";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
