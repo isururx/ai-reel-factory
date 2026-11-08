@@ -1,5 +1,6 @@
 import ipaddress
 import re
+from email.utils import parsedate_to_datetime
 import socket
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -30,9 +31,13 @@ def _parse_date(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            # RSS 2.0 commonly uses RFC 822 / RFC 2822 dates (e.g. pubDate).
+            parsed = parsedate_to_datetime(value)
         return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-    except ValueError:
+    except (TypeError, ValueError, OverflowError):
         return None
 
 
