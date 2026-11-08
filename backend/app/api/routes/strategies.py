@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.database.session import get_db
+from app.core.auth import CurrentUser\nfrom app.database.session import get_db
 from app.models.page import Page
 from app.models.strategy import PageStrategy, StrategyVersion
 from app.schemas.strategies import (
