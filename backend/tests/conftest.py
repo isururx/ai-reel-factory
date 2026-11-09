@@ -3,26 +3,33 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
 from app import models  # noqa: F401
 from app.database.base import Base
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.database.session import get_db
 from app.main import app
+
+
 @pytest.fixture()
-def client():
+def db_session():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     testing_session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     Base.metadata.create_all(bind=engine)
+    session = testing_session()
+    yield session
+    session.close()
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+
+@pytest.fixture()
+def client(db_session):
     def override_get_db():
-        db = testing_session()
-        try:
-            yield db
-        finally:
-            db.close()
+        yield db_session
+
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser("test-user-0001")
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=engine)
-    engine.dispose()

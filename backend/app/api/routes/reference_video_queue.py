@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -15,7 +15,7 @@ from app.schemas.reference_video_queue import (
 )
 from app.services.facebook_downloader import FacebookDownloadError, validate_facebook_url
 from app.tasks.reference_video_queue import drain_next_reference_video_job
-from app.storage.r2 import create_download_url
+from app.storage.r2 import create_download_url, upload_fileobj
 
 router = APIRouter(prefix="/pages/{page_id}/reference-videos", tags=["reference video queue"])
 
@@ -117,3 +117,79 @@ def get_page_reference_video_file(page_id: int, video_id: int,
     if video is None:
         raise HTTPException(status_code=404, detail="Analyzed video not found.")
     return {"url": create_download_url(video.object_key), "expires_in": 900}
+
+
+
+@router.post("/queue/{job_id}/upload", response_model=ReferenceVideoQueueJobRead, status_code=202)
+async def upload_video_for_queued_job(
+    page_id: int,
+    job_id: int,
+    user: CurrentUser,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Attach a user-provided video to a job whose public URL required authentication."""
+    from pathlib import Path
+    from uuid import uuid4
+    from app.storage.r2 import upload_fileobj
+
+    _owned_page(page_id, user, db)
+    job = db.scalar(select(ReferenceVideoJob).where(
+        ReferenceVideoJob.id == job_id,
+        ReferenceVideoJob.page_id == page_id,
+        ReferenceVideoJob.owner_id == user.id,
+    ))
+    if job is None:
+        raise HTTPException(status_code=404, detail="Queue job not found.")
+    if job.status != "needs_upload":
+        raise HTTPException(status_code=409, detail="This job is not waiting for a manual video upload.")
+
+    allowed_types = {"video/mp4", "video/webm", "video/quicktime", "video/x-matroska"}
+    content_type = (file.content_type or "").lower()
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=415, detail="Upload an MP4, WebM, MOV or MKV video.")
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size <= 0 or size > 300 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video must be between 1 byte and 300 MB.")
+
+    suffix = Path(file.filename or "reference-video.mp4").suffix.lower()[:12] or ".mp4"
+    object_key = f"reference-videos/{user.id}/{page_id}/{uuid4().hex}{suffix}"
+    try:
+        upload_fileobj(file.file, object_key, content_type)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Could not store the uploaded video in Cloudflare R2.") from exc
+
+    video = ReferenceVideo(
+        owner_id=user.id,
+        page_id=page_id,
+        reference_page_id=None,
+        title=job.title,
+        source_url=job.source_url,
+        object_key=object_key,
+        original_filename=Path(file.filename or "reference-video.mp4").name[:255],
+        content_type=content_type,
+        file_size=size,
+        views_count=job.views_count,
+        reactions_count=job.reactions_count,
+        shares_count=job.shares_count,
+        comments_count=job.comments_count,
+        manual_comments=job.manual_comments or [],
+        engagement_notes=job.engagement_notes or "",
+        analysis_status="pending",
+    )
+    db.add(video)
+    db.flush()
+    job.reference_video_id = video.id
+    job.status = "queued"
+    job.error_message = None
+    job.started_at = None
+    job.completed_at = None
+    db.commit()
+    db.refresh(job)
+    try:
+        drain_next_reference_video_job.delay()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Video uploaded and queued in the database, but Redis could not notify the worker. Start Redis and the Celery worker.") from exc
+    return job

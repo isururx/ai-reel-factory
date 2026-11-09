@@ -130,6 +130,31 @@ export default function ReferencesPage() {
     }
   }
 
+  async function uploadFallback(jobId: number, file: File) {
+    if (pageId === "") return;
+    setSubmitting(true); setError(""); setNotice("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const response = await authenticatedFetch(`${API}/pages/${pageId}/reference-videos/queue/${jobId}/upload`, {
+        method: "POST",
+        body: form,
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const detail = body?.detail ?? `Upload failed (${response.status})`;
+        throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+      }
+      await refresh();
+      setNotice("Video uploaded successfully. It has returned to the FIFO analysis queue.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not upload the replacement video.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function openVideo(videoId: number) {
     try {
       const result = await api<{ url: string }>(`/pages/${pageId}/reference-videos/${videoId}/file`);
@@ -172,7 +197,7 @@ export default function ReferencesPage() {
                 <div className="mb-5">
                   <p className="text-xs font-semibold tracking-widest text-cyan-300">NEW ANALYSIS</p>
                   <h2 className="mt-2 text-xl font-semibold">Submit a Facebook video / Reel</h2>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">The video is added to the queue immediately. The worker downloads it at up to 720p, stores it privately, then runs Gemini analysis.</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">The video is added to the queue immediately. If Facebook requires login, you can upload a video file you are authorized to use and resume the same analysis job.</p>
                 </div>
                 <form onSubmit={submit} className="space-y-5">
                   <label className="block text-sm text-slate-300">Public Facebook video URL
@@ -200,7 +225,7 @@ export default function ReferencesPage() {
                     <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="e.g. observed on 9 Nov; counts may change over time" className="field mt-2" />
                   </label>
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-slate-500">Only public videos accessible without signing in are supported.</p>
+                    <p className="text-xs text-slate-500">If Facebook requires login, the job will pause and offer a manual MP4/video upload instead.</p>
                     <button disabled={submitting} className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50">{submitting ? "Adding to queue…" : "Add to analysis queue →"}</button>
                   </div>
                 </form>
@@ -219,6 +244,20 @@ export default function ReferencesPage() {
                         <span className={`rounded-lg border px-3 py-1.5 text-xs ${job.status === "completed" ? "border-emerald-300/20 text-emerald-200" : job.status === "failed" ? "border-rose-300/20 text-rose-200" : job.status === "processing" ? "border-cyan-300/20 text-cyan-200" : "border-amber-300/20 text-amber-200"}`}>{job.status === "queued" && job.queue_position ? `Queued #${job.queue_position}` : job.status}</span>
                       </div>
                       {job.error_message && <p className="mt-3 text-xs text-rose-200">{job.error_message}</p>}
+                      {job.status === "needs_upload" && (
+                        <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3">
+                          <p className="text-xs leading-5 text-amber-100">Facebook requires login for this video. Upload a video file you have permission to use; the original URL and engagement details will be kept.</p>
+                          <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-950">
+                            Upload video to continue
+                            <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" className="sr-only" disabled={submitting} onChange={event => {
+                              const selected = event.currentTarget.files?.[0];
+                              if (selected) void uploadFallback(job.id, selected);
+                              event.currentTarget.value = "";
+                            }} />
+                          </label>
+                          <p className="mt-2 text-[11px] text-slate-500">MP4, WebM, MOV or MKV · maximum 300 MB</p>
+                        </div>
+                      )}
                       {job.completed_at && <p className="mt-2 text-xs text-emerald-300">Completed {dateLabel(job.completed_at)}</p>}
                     </article>)}
                   </div>
