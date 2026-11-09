@@ -21,6 +21,10 @@ class ReferenceVideoRead(BaseModel):
     engagement_notes: str
     analysis_status: str
     analysis_result: dict
+    analysis_provider: str | None = None
+    analysis_model: str | None = None
+    analysis_attempt_count: int = 0
+    analysis_total_duration_ms: int | None = None
     analyzed_at: datetime | None
     created_at: datetime
 
