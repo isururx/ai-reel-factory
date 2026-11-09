@@ -153,7 +153,7 @@ def drain_next_reference_video_job(self) -> dict:
             for index, attempt in enumerate(execution.attempts, start=1):
                 db.add(ReferenceVideoAnalysisAttempt(
                     owner_id=job.owner_id, page_id=job.page_id, reference_video_id=video.id,
-                    job_id=job.id, attempt_number=index, provider=attempt.provider,
+                    job_id=job.id, attempt_number=prior_attempt_count + index, provider=attempt.provider,
                     model_id=attempt.model_id, status=attempt.status, error_code=attempt.error_code,
                     error_message=attempt.error_message, duration_ms=attempt.duration_ms,
                     input_tokens=attempt.input_tokens, output_tokens=attempt.output_tokens,
