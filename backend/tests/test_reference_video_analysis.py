@@ -77,3 +77,37 @@ def test_all_provider_failures_are_returned_for_logging(monkeypatch):
         assert all(item.status == "failed" for item in exc.attempts)
     else:
         raise AssertionError("Expected all providers to fail")
+
+
+
+def test_fallback_reaches_gemini_25_after_qwen_failure(monkeypatch):
+    monkeypatch.setattr(analysis.settings, "gemini_analysis_model", "gemini-3.5-flash-lite")
+    monkeypatch.setattr(analysis.settings, "qwen_analysis_model", "qwen3.8-flash")
+    monkeypatch.setattr(analysis.settings, "gemini_fallback_model", "gemini-2.5-flash")
+    monkeypatch.setattr(analysis, "create_download_url", lambda *args, **kwargs: "https://signed.example/video.mp4")
+    calls = []
+
+    def gemini(path, prompt, model):
+        calls.append(("gemini", model))
+        if model == "gemini-3.5-flash-lite":
+            raise RuntimeError("primary unavailable")
+        return _valid_result(), 80, 15
+
+    def qwen(url, prompt, model):
+        calls.append(("qwen", model))
+        raise RuntimeError("Qwen quota exceeded")
+
+    monkeypatch.setattr(analysis, "_gemini_analyze", gemini)
+    monkeypatch.setattr(analysis, "_qwen_analyze", qwen)
+    result = analysis.analyze_video_with_fallback(
+        "video.mp4", {}, object_key="private/video.mp4"
+    )
+
+    assert calls == [
+        ("gemini", "gemini-3.5-flash-lite"),
+        ("qwen", "qwen3.8-flash"),
+        ("gemini", "gemini-2.5-flash"),
+    ]
+    assert result.provider == "gemini"
+    assert result.model_id == "gemini-2.5-flash"
+    assert [item.status for item in result.attempts] == ["failed", "failed", "completed"]
