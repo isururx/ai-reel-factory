@@ -15,6 +15,7 @@ from app.models.page import Page
 from app.models.reference_video import ReferenceVideo
 from app.models.reference_video_job import ReferenceVideoJob
 from app.models.reference_insight import ReferenceCreativeInsight
+from app.services.creative_intelligence import persist_creative_intelligence
 from app.services.facebook_downloader import FacebookDownloadError, download_public_video
 from app.services.reference_video_analysis import analyze_video_file
 from app.storage.r2 import download_file, upload_fileobj
@@ -65,7 +66,6 @@ def drain_next_reference_video_job(self) -> dict:
         video = db.get(ReferenceVideo, job.reference_video_id) if job.reference_video_id else None
         with TemporaryDirectory(prefix="ai-reel-reference-") as temp_dir:
             if video is not None:
-                # The user supplied an MP4 after the public Facebook downloader required login.
                 local_path = Path(temp_dir) / video.original_filename
                 download_file(video.object_key, str(local_path))
             else:
@@ -111,7 +111,8 @@ def drain_next_reference_video_job(self) -> dict:
                     db.refresh(video)
                     job.reference_video_id = video.id
                     db.commit()
-                    local_path = path
+                    local_path = Path(temp_dir) / path.name
+                    shutil.copy2(path, local_path)
                 finally:
                     if download_temp_dir is not None:
                         download_temp_dir.cleanup()
@@ -122,19 +123,27 @@ def drain_next_reference_video_job(self) -> dict:
             video.analysis_status = "completed"
             video.analysis_result = analysis
             video.analyzed_at = datetime.now(timezone.utc)
+            intelligence_result = persist_creative_intelligence(
+                db, owner_id=job.owner_id, page_id=page.id, video=video, analysis=analysis
+            )
             db.add(ReferenceCreativeInsight(
                 owner_id=job.owner_id,
                 page_id=job.page_id,
                 reference_video_id=video.id,
                 title=f"Creative analysis: {video.title}"[:200],
-                content=analysis,
+                content={**analysis, "creative_intelligence_persistence": intelligence_result},
                 review_status="pending_review",
             ))
             job.status = "completed"
             job.completed_at = datetime.now(timezone.utc)
             job.error_message = None
             db.commit()
-            return {"status": "completed", "job_id": job.id, "video_id": video.id}
+            return {
+                "status": "completed",
+                "job_id": job.id,
+                "video_id": video.id,
+                "creative_intelligence": intelligence_result,
+            }
     except Exception as exc:
         db.rollback()
         if job_id is not None:
