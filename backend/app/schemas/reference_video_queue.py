@@ -11,6 +11,8 @@ class ReferenceVideoQueueCreate(BaseModel):
     comments_count: int | None = Field(default=None, ge=0)
     manual_comments: list[str] = Field(default_factory=list, max_length=200)
     engagement_notes: str = Field(default="", max_length=10000)
+    analysis_primary_provider: str | None = Field(default=None, pattern="^(gemini|qwen)$")
+    analysis_primary_model: str | None = Field(default=None, max_length=160)
 
 
 class ReferenceVideoQueueJobRead(BaseModel):
@@ -30,6 +32,8 @@ class ReferenceVideoQueueJobRead(BaseModel):
     created_at: datetime
     started_at: datetime | None
     completed_at: datetime | None
+    analysis_primary_provider: str | None = None
+    analysis_primary_model: str | None = None
 
 
 class ReferenceVideoQueueJobList(BaseModel):
@@ -56,5 +60,9 @@ class ReferenceVideoRead(BaseModel):
     engagement_notes: str
     analysis_status: str
     analysis_result: dict
+    analysis_provider: str | None = None
+    analysis_model: str | None = None
+    analysis_attempt_count: int = 0
+    analysis_total_duration_ms: int | None = None
     analyzed_at: datetime | None
     created_at: datetime
