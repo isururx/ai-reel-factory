@@ -132,26 +132,34 @@ def _gemini_analyze(file_path: str | Path, prompt: str, model_id: str) -> tuple[
                 pass
 
 
-def _qwen_analyze(video_url: str, prompt: str, model_id: str) -> tuple[dict, int | None, int | None]:
-    if not settings.qwen_api_key:
-        raise RuntimeError("QWEN_API_KEY is not configured.")
+def _nemotron_analyze(video_url: str, prompt: str, model_id: str) -> tuple[dict, int | None, int | None]:
+    """Call NVIDIA NIM's native video+audio chat-completions interface."""
+    if not settings.nvidia_api_key:
+        raise RuntimeError("NVIDIA_API_KEY is not configured.")
     if not video_url:
-        raise RuntimeError("A temporary R2 video URL is required for Qwen video input.")
-    base_url = (settings.qwen_base_url or "https://dashscope-intl.aliyuncs.com/compatible-mode/v1").rstrip("/")
+        raise RuntimeError("A temporary R2 video URL is required for Nemotron video input.")
+
+    base_url = (settings.nvidia_nim_base_url or "https://integrate.api.nvidia.com/v1").rstrip("/")
     payload = {
         "model": model_id,
         "messages": [{"role": "user", "content": [
-            {"type": "video_url", "video_url": {"url": video_url, "fps": 1.0}},
+            {"type": "video_url", "video_url": {"url": video_url}},
             {"type": "text", "text": prompt},
         ]}],
-        "response_format": {"type": "json_object"}, "temperature": 0.2, "max_tokens": 12288,
+        "mm_processor_kwargs": {"use_audio_in_video": True},
+        "response_format": {"type": "json_object"},
+        "temperature": 0.2,
+        "max_tokens": 12288,
     }
     with httpx.Client(timeout=httpx.Timeout(300.0, connect=20.0)) as client:
-        response = client.post(f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {settings.qwen_api_key}", "Content-Type": "application/json"},
-            json=payload)
+        response = client.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {settings.nvidia_api_key}", "Content-Type": "application/json"},
+            json=payload,
+        )
         response.raise_for_status()
         data = response.json()
+
     content = data["choices"][0]["message"]["content"]
     if isinstance(content, list):
         content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
@@ -162,7 +170,7 @@ def _qwen_analyze(video_url: str, prompt: str, model_id: str) -> tuple[dict, int
 def configured_provider_chain(primary_provider: str | None = None, primary_model: str | None = None) -> list[tuple[str, str]]:
     defaults = [
         ("gemini", settings.gemini_analysis_model),
-        ("qwen", settings.qwen_analysis_model),
+        ("nemotron", settings.nemotron_analysis_model),
         ("gemini", settings.gemini_fallback_model),
     ]
     if primary_provider and primary_model:
@@ -186,11 +194,10 @@ def analyze_video_with_fallback(
         try:
             if provider == "gemini":
                 result, input_tokens, output_tokens = _gemini_analyze(file_path, prompt, model_id)
-            elif provider == "qwen":
+            elif provider == "nemotron":
                 if video_url is None and object_key:
                     video_url = create_download_url(object_key, expires_in=1800)
-                qwen_prompt = prompt + "\n\nPROVIDER INPUT LIMITATION: This Qwen video adapter supplies visual video frames only, not the original audio track. Do not infer spoken narration, music, sound effects, pauses, or audio emphasis. Mark audio-related fields as unavailable/not provided unless directly supported by visible evidence. Do not fabricate a transcript.\n"
-                result, input_tokens, output_tokens = _qwen_analyze(video_url or "", qwen_prompt, model_id)
+                result, input_tokens, output_tokens = _nemotron_analyze(video_url or "", prompt, model_id)
             else:
                 raise RuntimeError(f"Unsupported analysis provider: {provider}")
             duration_ms = int((time.monotonic() - timer) * 1000)
@@ -204,7 +211,6 @@ def analyze_video_with_fallback(
             code = str(getattr(response, "status_code", None) or getattr(exc, "code", None) or type(exc).__name__)[:80]
             attempts.append(ProviderAttempt(provider, model_id, "failed", attempt_started, datetime.now(timezone.utc), duration_ms,
                 error_code=code, error_message=str(exc)[:2000]))
-            # Immediate fallback: no retry/backoff. Continue to the next configured provider.
     summary = "; ".join(f"{a.provider}/{a.model_id}: {a.error_code}" for a in attempts)
     raise AllAnalysisProvidersFailed(summary, attempts)
 
