@@ -9,7 +9,7 @@ type Video = {
   id: number; title: string; source_url: string | null; original_filename: string;
   content_type: string; file_size: number; views_count: number | null;
   reactions_count: number | null; shares_count: number | null; comments_count: number | null;
-  manual_comments: string[]; engagement_notes: string; analysis_status: string;
+  manual_comments: string[]; analysis_status: string;
   created_at: string; analysis_result: Record<string, any>;
 };
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
