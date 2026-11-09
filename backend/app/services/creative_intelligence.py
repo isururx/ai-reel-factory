@@ -231,7 +231,7 @@ def persist_creative_intelligence(
             continue
         count = db.scalar(select(func.count(func.distinct(
             PatternEvidence.reference_video_id
-        )).where(PatternEvidence.pattern_id == pattern_id))) or 0
+        ))).where(PatternEvidence.pattern_id == pattern_id)) or 0
         pattern.supporting_video_count = int(count)
         # Repetition across distinct videos is a maturity label, not a performance claim.
         pattern.status = "active" if count >= 3 else "emerging"
