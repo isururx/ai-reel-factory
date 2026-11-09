@@ -102,7 +102,7 @@ async def upload_reference_video(
         raise HTTPException(status_code=413, detail="Video must be between 1 byte and 300 MB.")
     return _store_video(db, user, validated_reference_id, file.file, file.filename or "reference-video.mp4",
                         content_type, size, title, source_url, manual_comments[:200],
-                        views_count, reactions_count, shares_count, comments_count, engagement_notes)
+                        views_count, reactions_count, shares_count, comments_count)
 
 
 @router.post("/import-facebook", response_model=ReferenceVideoRead, status_code=201)
@@ -111,7 +111,7 @@ def import_public_facebook_video(
     url: str = Form(...), title: str = Form("Reference video"),
     views_count: int | None = Form(None), reactions_count: int | None = Form(None),
     shares_count: int | None = Form(None), comments_count: int | None = Form(None),
-    manual_comments_json: str = Form("[]"), engagement_notes: str = Form(""),
+    manual_comments_json: str = Form("[]"),
     db: Session = Depends(get_db),
 ):
     reference = _reference(page_id, reference_id, user.id, db)
@@ -139,7 +139,7 @@ def import_public_facebook_video(
             return _store_video(db, user, validated_reference_id, stream, path.name, content_type, size,
                                 title if title != "Reference video" else detected_title, url,
                                 comments[:200], views_count, reactions_count, shares_count,
-                                comments_count, engagement_notes)
+                                comments_count)
     finally:
         temp_dir.cleanup()
 
@@ -208,8 +208,6 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
             "comment_count": video.comments_count,
         },
         "manual_comment_samples": (video.manual_comments or [])[:200],
-        "engagement_notes": video.engagement_notes,
-        "metrics_provenance": "Manually entered by the user; not independently verified.",
         "comment_sample_limitation": "User-supplied sample; may not represent all comments or viewers.",
     }
     db.close()
