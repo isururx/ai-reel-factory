@@ -31,3 +31,21 @@ class ReferenceVideoManualUpdate(BaseModel):
     comments_count: int | None = Field(default=None, ge=0)
     manual_comments: list[str] | None = None
     engagement_notes: str | None = Field(default=None, max_length=10000)
+
+
+class ReferenceInsightRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    page_id: int
+    reference_video_id: int
+    insight_type: str
+    title: str
+    content: dict
+    review_status: str
+    reviewer_notes: str
+    created_at: datetime
+
+
+class ReferenceInsightReview(BaseModel):
+    review_status: str = Field(pattern="^(approved|rejected|pending_review)$")
+    reviewer_notes: str = Field(default="", max_length=10000)
