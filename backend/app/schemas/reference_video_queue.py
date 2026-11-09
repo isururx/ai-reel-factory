@@ -11,7 +11,7 @@ class ReferenceVideoQueueCreate(BaseModel):
     comments_count: int | None = Field(default=None, ge=0)
     manual_comments: list[str] = Field(default_factory=list, max_length=200)
     engagement_notes: str = Field(default="", max_length=10000)
-    analysis_primary_provider: str | None = Field(default=None, pattern="^(gemini|qwen)$")
+    analysis_primary_provider: str | None = Field(default=None, pattern="^(gemini|nemotron)$")
     analysis_primary_model: str | None = Field(default=None, max_length=160)
 
     @model_validator(mode="after")
@@ -20,7 +20,7 @@ class ReferenceVideoQueueCreate(BaseModel):
             raise ValueError("Choose both analysis_primary_provider and analysis_primary_model.")
         allowed = {
             ("gemini", "gemini-3.5-flash-lite"),
-            ("qwen", "qwen3.8-flash"),
+            ("nemotron", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
             ("gemini", "gemini-2.5-flash"),
         }
         if self.analysis_primary_provider and (self.analysis_primary_provider, self.analysis_primary_model) not in allowed:
