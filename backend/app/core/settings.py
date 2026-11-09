@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     llm_api_key: str | None = None
     llm_base_url: str | None = None
+    meta_access_token: str | None = None
+    meta_graph_api_version: str = "v26.0"
     r2_account_id: str | None = None
     r2_access_key_id: str | None = None
     r2_secret_access_key: str | None = None
