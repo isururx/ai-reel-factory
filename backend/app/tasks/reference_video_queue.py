@@ -8,16 +8,17 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.database.session import SessionLocal
 from app.models.page import Page
 from app.models.reference_video import ReferenceVideo
 from app.models.reference_video_job import ReferenceVideoJob
+from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
 from app.models.reference_insight import ReferenceCreativeInsight
 from app.services.creative_intelligence import persist_creative_intelligence
 from app.services.facebook_downloader import FacebookDownloadError, download_public_video
-from app.services.reference_video_analysis import analyze_video_file
+from app.services.reference_video_analysis import analyze_video_with_fallback
 from app.storage.r2 import download_file, upload_fileobj
 from app.worker import celery_app
 
@@ -32,8 +33,6 @@ def _context(job: ReferenceVideoJob) -> dict:
             "comment_count": job.comments_count,
         },
         "manual_comment_samples": (job.manual_comments or [])[:200],
-        "engagement_notes": job.engagement_notes,
-        "metrics_provenance": "Manually entered by the user; not independently verified.",
         "comment_sample_limitation": "User-supplied sample; may not represent all comments or viewers.",
     }
 
@@ -103,7 +102,6 @@ def drain_next_reference_video_job(self) -> dict:
                         shares_count=job.shares_count,
                         comments_count=job.comments_count,
                         manual_comments=job.manual_comments or [],
-                        engagement_notes=job.engagement_notes or "",
                         analysis_status="processing",
                     )
                     db.add(video)
@@ -119,9 +117,52 @@ def drain_next_reference_video_job(self) -> dict:
 
             video.analysis_status = "processing"
             db.commit()
-            analysis = analyze_video_file(local_path, _context(job))
+            prior_attempt_count = db.scalar(select(func.count(ReferenceVideoAnalysisAttempt.id)).where(
+                ReferenceVideoAnalysisAttempt.reference_video_id == video.id,
+                ReferenceVideoAnalysisAttempt.owner_id == job.owner_id,
+            )) or 0
+            prior_duration_ms = db.scalar(select(func.sum(ReferenceVideoAnalysisAttempt.duration_ms)).where(
+                ReferenceVideoAnalysisAttempt.reference_video_id == video.id,
+                ReferenceVideoAnalysisAttempt.owner_id == job.owner_id,
+            )) or 0
+            try:
+                execution = analyze_video_with_fallback(
+                    local_path, _context(job), object_key=video.object_key,
+                    primary_provider=job.analysis_primary_provider, primary_model=job.analysis_primary_model,
+                )
+            except Exception as analysis_exc:
+                for index, attempt in enumerate(getattr(analysis_exc, "attempts", []), start=1):
+                    db.add(ReferenceVideoAnalysisAttempt(
+                        owner_id=job.owner_id, page_id=job.page_id, reference_video_id=video.id,
+                        job_id=job.id, attempt_number=prior_attempt_count + index, provider=attempt.provider,
+                        model_id=attempt.model_id, status=attempt.status, error_code=attempt.error_code,
+                        error_message=attempt.error_message, duration_ms=attempt.duration_ms,
+                        input_tokens=attempt.input_tokens, output_tokens=attempt.output_tokens,
+                        started_at=attempt.started_at, completed_at=attempt.completed_at,
+                    ))
+                db.commit()
+                raise
+
+            analysis = execution.result
+            for index, attempt in enumerate(execution.attempts, start=1):
+                db.add(ReferenceVideoAnalysisAttempt(
+                    owner_id=job.owner_id, page_id=job.page_id, reference_video_id=video.id,
+                    job_id=job.id, attempt_number=prior_attempt_count + index, provider=attempt.provider,
+                    model_id=attempt.model_id, status=attempt.status, error_code=attempt.error_code,
+                    error_message=attempt.error_message, duration_ms=attempt.duration_ms,
+                    input_tokens=attempt.input_tokens, output_tokens=attempt.output_tokens,
+                    started_at=attempt.started_at, completed_at=attempt.completed_at,
+                ))
+            # Commit provider logs before downstream pattern extraction. If that
+            # stage fails, the model attempt history must still be retained.
+            db.flush()
+            db.commit()
             video.analysis_status = "completed"
             video.analysis_result = analysis
+            video.analysis_provider = execution.provider
+            video.analysis_model = execution.model_id
+            video.analysis_attempt_count = prior_attempt_count + len(execution.attempts)
+            video.analysis_total_duration_ms = prior_duration_ms + execution.total_duration_ms
             video.analyzed_at = datetime.now(timezone.utc)
             intelligence_result = persist_creative_intelligence(
                 db, owner_id=job.owner_id, page_id=page.id, video=video, analysis=analysis
@@ -157,6 +198,18 @@ def drain_next_reference_video_job(self) -> dict:
                     if failed_video is not None and failed_video.analysis_status != "completed":
                         failed_video.analysis_status = "failed"
                         failed_video.analysis_result = {"error": str(exc)[:500]}
+                        failed_video.analysis_attempt_count = db.scalar(select(func.count(
+                            ReferenceVideoAnalysisAttempt.id
+                        )).where(
+                            ReferenceVideoAnalysisAttempt.reference_video_id == failed_video.id,
+                            ReferenceVideoAnalysisAttempt.owner_id == job.owner_id,
+                        )) or 0
+                        failed_video.analysis_total_duration_ms = db.scalar(select(func.sum(
+                            ReferenceVideoAnalysisAttempt.duration_ms
+                        )).where(
+                            ReferenceVideoAnalysisAttempt.reference_video_id == failed_video.id,
+                            ReferenceVideoAnalysisAttempt.owner_id == job.owner_id,
+                        ))
                 db.commit()
         return {"status": "failed", "job_id": job_id, "error": str(exc)[:500]}
     finally:

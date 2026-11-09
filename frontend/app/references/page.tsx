@@ -10,6 +10,7 @@ type Job = {
   queue_position: number | null; reference_video_id: number | null; error_message: string | null;
   views_count: number | null; reactions_count: number | null; shares_count: number | null;
   comments_count: number | null; created_at: string; started_at: string | null; completed_at: string | null;
+  analysis_primary_provider: string | null; analysis_primary_model: string | null;
 };
 type Queue = { jobs: Job[]; queued_count: number; processing_count: number };
 type Video = {
@@ -18,7 +19,12 @@ type Video = {
   reactions_count: number | null; shares_count: number | null; comments_count: number | null;
   manual_comments: string[]; analysis_status: string; analysis_result: Record<string, any>;
   analyzed_at: string | null; created_at: string;
+  analysis_provider: string | null; analysis_model: string | null;
+  analysis_attempt_count: number; analysis_total_duration_ms: number | null;
 };
+type Attempt = { id: number; attempt_number: number; provider: string; model_id: string; status: string;
+  error_code: string | null; error_message: string | null; duration_ms: number; input_tokens: number | null;
+  output_tokens: number | null; started_at: string; completed_at: string | null };
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
 
@@ -58,7 +64,9 @@ export default function ReferencesPage() {
   const [shares, setShares] = useState("");
   const [commentsCount, setCommentsCount] = useState("");
   const [commentsText, setCommentsText] = useState("");
-  const [notes, setNotes] = useState("");
+  const [primaryModel, setPrimaryModel] = useState("default");
+  const [attemptLogs, setAttemptLogs] = useState<Record<number, Attempt[]>>({});
+  const [loadingLogs, setLoadingLogs] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [retryingJobId, setRetryingJobId] = useState<number | null>(null);
@@ -115,13 +123,14 @@ export default function ReferencesPage() {
         shares_count: shares === "" ? null : Number(shares),
         comments_count: commentsCount === "" ? null : Number(commentsCount),
         manual_comments: commentsText.split("\n").map(x => x.trim()).filter(Boolean),
-        engagement_notes: notes.trim(),
+        analysis_primary_provider: primaryModel === "default" ? null : primaryModel.split("|")[0],
+        analysis_primary_model: primaryModel === "default" ? null : primaryModel.split("|")[1],
       };
       const job = await api<Job>(`/pages/${pageId}/reference-videos/queue`, {
         method: "POST", body: JSON.stringify(payload),
       });
       setUrl(""); setTitle(""); setViews(""); setReactions(""); setShares("");
-      setCommentsCount(""); setCommentsText(""); setNotes("");
+      setCommentsCount(""); setCommentsText(""); setPrimaryModel("default");
       await refresh();
       setNotice(`Video added to the FIFO queue. Queue position: ${job.queue_position ?? "calculating"}.`);
     } catch (e) {
@@ -169,6 +178,19 @@ export default function ReferencesPage() {
       setError(e instanceof Error ? e.message : "Could not retry this analysis.");
     } finally {
       setRetryingJobId(null);
+    }
+  }
+
+  async function loadAttemptLogs(videoId: number) {
+    if (pageId === "") return;
+    setLoadingLogs(videoId);
+    try {
+      const result = await api<Attempt[]>(`/pages/${pageId}/reference-videos/${videoId}/analysis-attempts`);
+      setAttemptLogs(current => ({ ...current, [videoId]: result }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load model analysis history.");
+    } finally {
+      setLoadingLogs(null);
     }
   }
 
@@ -220,6 +242,14 @@ export default function ReferencesPage() {
                   <label className="block text-sm text-slate-300">Public Facebook video URL
                     <input required type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.facebook.com/reel/..." className="field mt-2" />
                   </label>
+                  <label className="block text-sm text-slate-300">Primary analysis model
+                    <select value={primaryModel} onChange={e => setPrimaryModel(e.target.value)} className="field mt-2 max-w-xl">
+                      <option value="default">Default order: Gemini 3.5 → Gemini 2.5</option>
+                      <option value="gemini|gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+                      <option value="gemini|gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    </select>
+                    <span className="mt-1 block text-xs text-slate-500">Automatic fallback remains enabled. Selecting a model changes only the first attempt.</span>
+                  </label>
                   <label className="block text-sm text-slate-300">Video title <span className="text-xs text-slate-500">(optional)</span>
                     <input maxLength={200} value={title} onChange={e => setTitle(e.target.value)} placeholder="Auto-detected if left blank" className="field mt-2" />
                   </label>
@@ -237,9 +267,6 @@ export default function ReferencesPage() {
 
                   <label className="block text-sm text-slate-300">Comment samples <span className="text-xs text-slate-500">(one comment per line)</span>
                     <textarea value={commentsText} onChange={e => setCommentsText(e.target.value)} rows={4} placeholder="This is so interesting!&#10;Please make another video about this." className="field mt-2" />
-                  </label>
-                  <label className="block text-sm text-slate-300">Notes / source of metrics
-                    <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="e.g. observed on 9 Nov; counts may change over time" className="field mt-2" />
                   </label>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs text-slate-500">If Facebook requires login, the job will pause and offer a manual MP4/video upload instead.</p>
@@ -299,13 +326,33 @@ export default function ReferencesPage() {
                 {videos.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">Completed video analyses will appear here.</div> : (
                   <div className="grid gap-4 lg:grid-cols-2">
                     {videos.map(video => <article key={video.id} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-                      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="font-semibold">{video.title}</h3><p className="mt-1 text-xs text-slate-500">{video.original_filename} · {(video.file_size / 1024 / 1024).toFixed(1)} MB</p></div><span className="rounded-lg border border-emerald-300/20 px-2 py-1 text-xs text-emerald-200">Analyzed</span></div>
-                      <p className="mt-3 text-xs text-emerald-300">Analysis completed: {dateLabel(video.analyzed_at)}</p>
+                      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="font-semibold">{video.title}</h3><p className="mt-1 text-xs text-slate-500">{video.original_filename} · {(video.file_size / 1024 / 1024).toFixed(1)} MB</p></div><span className={`rounded-lg border px-2 py-1 text-xs ${video.analysis_status === "completed" ? "border-emerald-300/20 text-emerald-200" : "border-rose-300/20 text-rose-200"}`}>{video.analysis_status === "completed" ? "Analyzed" : "Failed"}</span></div>
+                      <p className={`mt-3 text-xs ${video.analysis_status === "completed" ? "text-emerald-300" : "text-rose-300"}`}>{video.analysis_status === "completed" ? "Analysis completed" : "Analysis failed"}: {dateLabel(video.analyzed_at)}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
+                        {video.analysis_model && <span className="rounded-md border border-cyan-300/20 px-2 py-1">Generated by: {video.analysis_model}</span>}
+                        <span className="rounded-md border border-white/10 px-2 py-1">{video.analysis_attempt_count} model attempt(s)</span>
+                        {video.analysis_total_duration_ms != null && <span className="rounded-md border border-white/10 px-2 py-1">{(video.analysis_total_duration_ms / 1000).toFixed(1)}s total</span>}
+                      </div>
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400"><span>Views: {metric(video.views_count)}</span><span>Reactions: {metric(video.reactions_count)}</span><span>Shares: {metric(video.shares_count)}</span><span>Comments: {metric(video.comments_count)}</span></div>
-                      <p className="mt-3 text-sm leading-6 text-slate-300">{video.analysis_result?.summary ?? "Analysis summary unavailable."}</p>
+                      <p className="mt-3 text-sm leading-6 text-slate-300">{video.analysis_result?.summary ?? video.analysis_result?.error ?? "Analysis summary unavailable."}</p>
                       {video.analysis_result?.hook?.description && <p className="mt-2 text-xs text-slate-400"><strong className="text-slate-200">Hook:</strong> {video.analysis_result.hook.description}</p>}
                       {Array.isArray(video.analysis_result?.reusable_patterns) && <div className="mt-3"><p className="text-xs font-semibold text-slate-200">Reusable patterns</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-400">{video.analysis_result.reusable_patterns.slice(0, 3).map((item: any, index: number) => <li key={index}>{item.pattern} — {item.adaptation_idea}</li>)}</ul></div>}
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4"><span className="text-[11px] text-slate-500">{video.manual_comments.length} comment samples</span><button onClick={() => void openVideo(video.id)} className="text-sm font-semibold text-cyan-300">Open stored video ↗</button></div>
+                      <div className="mt-3 border-t border-white/10 pt-3">
+                        <button type="button" onClick={() => void loadAttemptLogs(video.id)} disabled={loadingLogs === video.id} className="text-xs font-semibold text-cyan-300 disabled:opacity-50">
+                          {loadingLogs === video.id ? "Loading model history…" : attemptLogs[video.id] ? "Refresh model history" : "View model analysis log"}
+                        </button>
+                        {attemptLogs[video.id] && <ol className="mt-3 space-y-2">
+                          {attemptLogs[video.id].map(attempt => <li key={attempt.id} className="rounded-lg border border-white/10 bg-black/10 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-xs font-semibold text-slate-200">{attempt.attempt_number}. {attempt.provider} · {attempt.model_id}</span>
+                              <span className={`text-[11px] ${attempt.status === "completed" ? "text-emerald-300" : "text-rose-300"}`}>{attempt.status} · {(attempt.duration_ms / 1000).toFixed(1)}s</span>
+                            </div>
+                            {attempt.error_code && <p className="mt-1 text-[11px] text-rose-200">{attempt.error_code}: {attempt.error_message}</p>}
+                            <p className="mt-1 text-[10px] text-slate-500">Tokens: {attempt.input_tokens ?? "—"} in / {attempt.output_tokens ?? "—"} out</p>
+                          </li>)}
+                        </ol>}
+                      </div>
                     </article>)}
                   </div>
                 )}

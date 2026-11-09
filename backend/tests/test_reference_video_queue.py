@@ -18,7 +18,6 @@ def test_reference_video_submission_enters_fifo_queue(client, monkeypatch):
             "shares_count": 40,
             "comments_count": 70,
             "manual_comments": ["Great explanation", "Part two please"],
-            "engagement_notes": "Observed manually for testing.",
         },
     )
     second = client.post(
@@ -41,6 +40,40 @@ def test_reference_video_submission_enters_fifo_queue(client, monkeypatch):
     assert [job["id"] for job in queue.json()["jobs"]] == [
         second.json()["id"], first.json()["id"]
     ]
+
+
+def test_reference_video_queue_accepts_manual_primary_model(client, monkeypatch):
+    from app.api.routes import reference_video_queue
+
+    monkeypatch.setattr(reference_video_queue.drain_next_reference_video_job, "delay", lambda: None)
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    response = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue",
+        json={
+            "source_url": "https://www.facebook.com/reel/123456",
+            "analysis_primary_provider": "gemini",
+            "analysis_primary_model": "gemini-2.5-flash",
+        },
+    )
+    assert response.status_code == 202, response.text
+    assert response.json()["analysis_primary_provider"] == "gemini"
+    assert response.json()["analysis_primary_model"] == "gemini-2.5-flash"
+
+
+def test_reference_video_queue_rejects_unsupported_manual_model(client, monkeypatch):
+    from app.api.routes import reference_video_queue
+
+    monkeypatch.setattr(reference_video_queue.drain_next_reference_video_job, "delay", lambda: None)
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    response = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue",
+        json={
+            "source_url": "https://www.facebook.com/reel/123456",
+            "analysis_primary_provider": "gemini",
+            "analysis_primary_model": "unsupported-model",
+        },
+    )
+    assert response.status_code == 422
 
 
 def test_reference_video_queue_rejects_non_facebook_urls(client):
@@ -72,7 +105,6 @@ def test_failed_reference_video_job_can_be_retried(client, db_session, monkeypat
             "shares_count": 40,
             "comments_count": 70,
             "manual_comments": ["Great explanation"],
-            "engagement_notes": "Observed manually.",
         },
     )
     assert queued.status_code == 202
@@ -108,6 +140,51 @@ def test_only_failed_reference_video_jobs_can_be_retried(client, monkeypatch):
         f"/api/v1/pages/{page['id']}/reference-videos/queue/{queued.json()['id']}/retry"
     )
     assert response.status_code == 409
+
+
+def test_analysis_attempt_history_is_page_owner_scoped(client, db_session):
+    from datetime import datetime, timezone
+    from app.models.reference_video import ReferenceVideo
+    from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
+
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    video = ReferenceVideo(
+        owner_id="test-user-0001", page_id=page["id"], reference_page_id=None,
+        reference_post_id=None, title="Test video", source_url="https://www.facebook.com/reel/123456",
+        object_key="reference-videos/test/attempt-log.mp4", original_filename="clip.mp4",
+        content_type="video/mp4", file_size=100, manual_comments=[],
+        analysis_status="completed", analysis_result={"summary": "Test"},
+        analysis_provider="gemini", analysis_model="gemini-2.5-flash",
+        analysis_attempt_count=2, analysis_total_duration_ms=12000,
+    )
+    db_session.add(video)
+    db_session.commit()
+    db_session.refresh(video)
+    db_session.add_all([
+        ReferenceVideoAnalysisAttempt(
+            owner_id="test-user-0001", page_id=page["id"], reference_video_id=video.id,
+            attempt_number=1, provider="gemini", model_id="gemini-3.5-flash-lite",
+            status="failed", error_code="503", error_message="Unavailable", duration_ms=2000,
+            started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc),
+        ),
+        ReferenceVideoAnalysisAttempt(
+            owner_id="test-user-0001", page_id=page["id"], reference_video_id=video.id,
+            attempt_number=2, provider="gemini", model_id="gemini-2.5-flash",
+            status="completed", duration_ms=10000, input_tokens=100, output_tokens=50,
+            started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc),
+        ),
+    ])
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/pages/{page['id']}/reference-videos/{video.id}/analysis-attempts"
+    )
+    assert response.status_code == 200
+    assert [item["model_id"] for item in response.json()] == [
+        "gemini-3.5-flash-lite", "gemini-2.5-flash"
+    ]
+    assert response.json()[0]["status"] == "failed"
+    assert response.json()[1]["status"] == "completed"
 
 
 def test_reference_video_queue_is_page_owner_scoped(client, monkeypatch):

@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class ReferenceVideoQueueCreate(BaseModel):
@@ -10,7 +10,20 @@ class ReferenceVideoQueueCreate(BaseModel):
     shares_count: int | None = Field(default=None, ge=0)
     comments_count: int | None = Field(default=None, ge=0)
     manual_comments: list[str] = Field(default_factory=list, max_length=200)
-    engagement_notes: str = Field(default="", max_length=10000)
+    analysis_primary_provider: str | None = Field(default=None, pattern="^gemini$")
+    analysis_primary_model: str | None = Field(default=None, max_length=160)
+
+    @model_validator(mode="after")
+    def validate_primary_model(self):
+        if bool(self.analysis_primary_provider) != bool(self.analysis_primary_model):
+            raise ValueError("Choose both analysis_primary_provider and analysis_primary_model.")
+        allowed = {
+            ("gemini", "gemini-3.5-flash-lite"),
+            ("gemini", "gemini-2.5-flash"),
+        }
+        if self.analysis_primary_provider and (self.analysis_primary_provider, self.analysis_primary_model) not in allowed:
+            raise ValueError("Unsupported primary analysis model selection.")
+        return self
 
 
 class ReferenceVideoQueueJobRead(BaseModel):
@@ -30,6 +43,8 @@ class ReferenceVideoQueueJobRead(BaseModel):
     created_at: datetime
     started_at: datetime | None
     completed_at: datetime | None
+    analysis_primary_provider: str | None = None
+    analysis_primary_model: str | None = None
 
 
 class ReferenceVideoQueueJobList(BaseModel):
@@ -53,8 +68,11 @@ class ReferenceVideoRead(BaseModel):
     shares_count: int | None
     comments_count: int | None
     manual_comments: list[str]
-    engagement_notes: str
     analysis_status: str
     analysis_result: dict
+    analysis_provider: str | None = None
+    analysis_model: str | None = None
+    analysis_attempt_count: int = 0
+    analysis_total_duration_ms: int | None = None
     analyzed_at: datetime | None
     created_at: datetime

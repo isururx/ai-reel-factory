@@ -14,10 +14,11 @@ from app.database.session import get_db
 from app.models.reference import ReferencePage
 from app.models.reference_video import ReferenceVideo
 from app.models.reference_insight import ReferenceCreativeInsight
+from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
 from app.schemas.reference_videos import ReferenceVideoManualUpdate, ReferenceVideoRead
 from app.services.facebook_downloader import FacebookDownloadError, download_public_video
 from app.storage.r2 import create_download_url, download_file, upload_fileobj
-from app.services.reference_video_analysis import analyze_video_file
+from app.services.reference_video_analysis import analyze_video_with_fallback
 
 router = APIRouter(prefix="/pages/{page_id}/references/{reference_id}/videos", tags=["reference videos"])
 MAX_VIDEO_BYTES = 300 * 1024 * 1024
@@ -38,7 +39,7 @@ def _reference(page_id: int, reference_id: int, owner_id: str, db: Session) -> R
 def _store_video(db: Session, user: CurrentUser, reference_id: int, fileobj, filename: str,
                  content_type: str, size: int, title: str, source_url: str | None,
                  manual_comments: list[str], views_count: int | None, reactions_count: int | None,
-                 shares_count: int | None, comments_count: int | None, engagement_notes: str) -> ReferenceVideo:
+                 shares_count: int | None, comments_count: int | None) -> ReferenceVideo:
     suffix = Path(filename).suffix.lower()[:12] or mimetypes.guess_extension(content_type) or ".mp4"
     object_key = f"reference-videos/{user.id}/{reference_id}/{uuid4().hex}{suffix}"
     try:
@@ -50,7 +51,7 @@ def _store_video(db: Session, user: CurrentUser, reference_id: int, fileobj, fil
         source_url=source_url, object_key=object_key, original_filename=Path(filename).name[:255],
         content_type=content_type, file_size=size, manual_comments=manual_comments,
         views_count=views_count, reactions_count=reactions_count, shares_count=shares_count,
-        comments_count=comments_count, engagement_notes=engagement_notes,
+        comments_count=comments_count,
     )
     db.add(video)
     db.commit()
@@ -79,7 +80,6 @@ async def upload_reference_video(
     shares_count: int | None = Form(None),
     comments_count: int | None = Form(None),
     manual_comments_json: str = Form("[]"),
-    engagement_notes: str = Form(""),
     db: Session = Depends(get_db),
 ):
     reference = _reference(page_id, reference_id, user.id, db)
@@ -102,7 +102,7 @@ async def upload_reference_video(
         raise HTTPException(status_code=413, detail="Video must be between 1 byte and 300 MB.")
     return _store_video(db, user, validated_reference_id, file.file, file.filename or "reference-video.mp4",
                         content_type, size, title, source_url, manual_comments[:200],
-                        views_count, reactions_count, shares_count, comments_count, engagement_notes)
+                        views_count, reactions_count, shares_count, comments_count)
 
 
 @router.post("/import-facebook", response_model=ReferenceVideoRead, status_code=201)
@@ -111,7 +111,7 @@ def import_public_facebook_video(
     url: str = Form(...), title: str = Form("Reference video"),
     views_count: int | None = Form(None), reactions_count: int | None = Form(None),
     shares_count: int | None = Form(None), comments_count: int | None = Form(None),
-    manual_comments_json: str = Form("[]"), engagement_notes: str = Form(""),
+    manual_comments_json: str = Form("[]"),
     db: Session = Depends(get_db),
 ):
     reference = _reference(page_id, reference_id, user.id, db)
@@ -139,7 +139,7 @@ def import_public_facebook_video(
             return _store_video(db, user, validated_reference_id, stream, path.name, content_type, size,
                                 title if title != "Reference video" else detected_title, url,
                                 comments[:200], views_count, reactions_count, shares_count,
-                                comments_count, engagement_notes)
+                                comments_count)
     finally:
         temp_dir.cleanup()
 
@@ -208,8 +208,6 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
             "comment_count": video.comments_count,
         },
         "manual_comment_samples": (video.manual_comments or [])[:200],
-        "engagement_notes": video.engagement_notes,
-        "metrics_provenance": "Manually entered by the user; not independently verified.",
         "comment_sample_limitation": "User-supplied sample; may not represent all comments or viewers.",
     }
     db.close()
@@ -219,7 +217,8 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
         with tempfile.TemporaryDirectory(prefix="ai-reel-analysis-") as temp_dir:
             local_path = Path(temp_dir) / f"reference{suffix}"
             download_file(object_key, str(local_path))
-            analysis = analyze_video_file(local_path, context)
+            execution = analyze_video_with_fallback(local_path, context, object_key=object_key)
+            analysis = execution.result
 
         # Reuse the request session only after the long R2/Gemini work has finished.
         video = db.scalar(select(ReferenceVideo).where(
@@ -231,7 +230,20 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
             raise HTTPException(status_code=404, detail="Reference video was removed during analysis.")
         video.analysis_status = "completed"
         video.analysis_result = analysis
+        video.analysis_provider = execution.provider
+        video.analysis_model = execution.model_id
+        video.analysis_attempt_count = len(execution.attempts)
+        video.analysis_total_duration_ms = execution.total_duration_ms
         video.analyzed_at = datetime.now(timezone.utc)
+        for index, attempt in enumerate(execution.attempts, start=1):
+            db.add(ReferenceVideoAnalysisAttempt(
+                owner_id=user.id, page_id=page_id, reference_video_id=video.id,
+                attempt_number=index, provider=attempt.provider, model_id=attempt.model_id,
+                status=attempt.status, error_code=attempt.error_code, error_message=attempt.error_message,
+                duration_ms=attempt.duration_ms, input_tokens=attempt.input_tokens,
+                output_tokens=attempt.output_tokens, started_at=attempt.started_at,
+                completed_at=attempt.completed_at,
+            ))
         insight = ReferenceCreativeInsight(
             owner_id=user.id,
             page_id=page_id,
@@ -256,5 +268,17 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
         if failed_video is not None:
             failed_video.analysis_status = "failed"
             failed_video.analysis_result = {"error": str(exc)[:500]}
+            attempts = getattr(exc, "attempts", [])
+            for index, attempt in enumerate(attempts, start=1):
+                db.add(ReferenceVideoAnalysisAttempt(
+                    owner_id=user.id, page_id=page_id, reference_video_id=failed_video.id,
+                    attempt_number=index, provider=attempt.provider, model_id=attempt.model_id,
+                    status=attempt.status, error_code=attempt.error_code, error_message=attempt.error_message,
+                    duration_ms=attempt.duration_ms, input_tokens=attempt.input_tokens,
+                    output_tokens=attempt.output_tokens, started_at=attempt.started_at,
+                    completed_at=attempt.completed_at,
+                ))
+            failed_video.analysis_attempt_count = len(attempts)
+            failed_video.analysis_total_duration_ms = sum(item.duration_ms for item in attempts)
             db.commit()
         raise HTTPException(status_code=502, detail=f"Video analysis failed: {str(exc)[:300]}") from exc

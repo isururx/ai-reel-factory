@@ -18,9 +18,12 @@ class ReferenceVideoRead(BaseModel):
     shares_count: int | None
     comments_count: int | None
     manual_comments: list[str]
-    engagement_notes: str
     analysis_status: str
     analysis_result: dict
+    analysis_provider: str | None = None
+    analysis_model: str | None = None
+    analysis_attempt_count: int = 0
+    analysis_total_duration_ms: int | None = None
     analyzed_at: datetime | None
     created_at: datetime
 
@@ -32,7 +35,6 @@ class ReferenceVideoManualUpdate(BaseModel):
     shares_count: int | None = Field(default=None, ge=0)
     comments_count: int | None = Field(default=None, ge=0)
     manual_comments: list[str] | None = None
-    engagement_notes: str | None = Field(default=None, max_length=10000)
 
 
 class ReferenceInsightRead(BaseModel):

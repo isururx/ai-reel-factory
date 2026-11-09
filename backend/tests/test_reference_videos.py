@@ -22,7 +22,6 @@ def test_upload_reference_video_stores_manual_metrics_and_comments(client, monke
             "shares_count": "35",
             "comments_count": "62",
             "manual_comments_json": '["Amazing explanation", "Please make part two"]',
-            "engagement_notes": "Counts manually observed for testing.",
         },
     )
     assert response.status_code == 201, response.text
@@ -85,7 +84,18 @@ def test_reference_video_analysis_saves_page_scoped_insight(client, monkeypatch)
         ],
     }
     monkeypatch.setattr(reference_videos, "download_file", fake_download)
-    monkeypatch.setattr(reference_videos, "analyze_video_file", lambda path, context: expected)
+    from types import SimpleNamespace
+    monkeypatch.setattr(
+        reference_videos,
+        "analyze_video_with_fallback",
+        lambda path, context, object_key=None: SimpleNamespace(
+            result=expected,
+            provider="gemini",
+            model_id="gemini-3.5-flash-lite",
+            attempts=[],
+            total_duration_ms=10,
+        ),
+    )
 
     analyzed = client.post(
         f"/api/v1/pages/{page['id']}/references/{reference['id']}/videos/{video_id}/analyze"

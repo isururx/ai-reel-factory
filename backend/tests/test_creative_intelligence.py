@@ -20,7 +20,6 @@ def _video(db_session, page_id: int, title: str) -> ReferenceVideo:
         shares_count=40,
         comments_count=60,
         manual_comments=[],
-        engagement_notes="Entered manually",
         analysis_status="completed",
         analysis_result={},
     )
