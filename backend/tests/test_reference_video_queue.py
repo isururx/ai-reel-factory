@@ -52,13 +52,13 @@ def test_reference_video_queue_accepts_manual_primary_model(client, monkeypatch)
         f"/api/v1/pages/{page['id']}/reference-videos/queue",
         json={
             "source_url": "https://www.facebook.com/reel/123456",
-            "analysis_primary_provider": "qwen",
-            "analysis_primary_model": "qwen3.8-flash",
+            "analysis_primary_provider": "nemotron",
+            "analysis_primary_model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         },
     )
     assert response.status_code == 202, response.text
-    assert response.json()["analysis_primary_provider"] == "qwen"
-    assert response.json()["analysis_primary_model"] == "qwen3.8-flash"
+    assert response.json()["analysis_primary_provider"] == "nemotron"
+    assert response.json()["analysis_primary_model"] == "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
 
 
 def test_reference_video_queue_rejects_unsupported_manual_model(client, monkeypatch):
@@ -70,7 +70,7 @@ def test_reference_video_queue_rejects_unsupported_manual_model(client, monkeypa
         f"/api/v1/pages/{page['id']}/reference-videos/queue",
         json={
             "source_url": "https://www.facebook.com/reel/123456",
-            "analysis_primary_provider": "qwen",
+            "analysis_primary_provider": "nemotron",
             "analysis_primary_model": "qwen-not-a-real-model",
         },
     )
@@ -156,7 +156,7 @@ def test_analysis_attempt_history_is_page_owner_scoped(client, db_session):
         object_key="reference-videos/test/attempt-log.mp4", original_filename="clip.mp4",
         content_type="video/mp4", file_size=100, manual_comments=[], engagement_notes="",
         analysis_status="completed", analysis_result={"summary": "Test"},
-        analysis_provider="qwen", analysis_model="qwen3.8-flash",
+        analysis_provider="nemotron", analysis_model="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         analysis_attempt_count=2, analysis_total_duration_ms=12000,
     )
     db_session.add(video)
@@ -171,7 +171,7 @@ def test_analysis_attempt_history_is_page_owner_scoped(client, db_session):
         ),
         ReferenceVideoAnalysisAttempt(
             owner_id="test-user-0001", page_id=page["id"], reference_video_id=video.id,
-            attempt_number=2, provider="qwen", model_id="qwen3.8-flash",
+            attempt_number=2, provider="nemotron", model_id="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
             status="completed", duration_ms=10000, input_tokens=100, output_tokens=50,
             started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc),
         ),
@@ -183,7 +183,7 @@ def test_analysis_attempt_history_is_page_owner_scoped(client, db_session):
     )
     assert response.status_code == 200
     assert [item["model_id"] for item in response.json()] == [
-        "gemini-3.5-flash-lite", "qwen3.8-flash"
+        "gemini-3.5-flash-lite", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
     ]
     assert response.json()[0]["status"] == "failed"
     assert response.json()[1]["status"] == "completed"
