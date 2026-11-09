@@ -3,13 +3,14 @@
 import type { ReactNode } from "react";
 import AuthActions from "@/components/AuthActions";
 
-type AppSection = "overview" | "trends" | "strategies" | "scripts";
+type AppSection = "overview" | "trends" | "strategies" | "scripts" | "downloader";
 
 const links: { id: AppSection; label: string; href: string; icon: string }[] = [
   { id: "overview", label: "Overview", href: "/", icon: "◫" },
   { id: "trends", label: "Discover", href: "/trends", icon: "⌁" },
   { id: "strategies", label: "Strategies", href: "/strategies", icon: "◈" },
   { id: "scripts", label: "Script studio", href: "/scripts", icon: "▤" },
+  { id: "downloader", label: "Downloader", href: "/downloader", icon: "⇩" },
 ];
 
 export function LoadingSkeleton({ rows = 3 }: { rows?: number }) {
@@ -67,7 +68,7 @@ export default function AppShell({ active, children }: { active: AppSection; chi
         {links.map((link) => <a key={link.id} href={link.href} className={active === link.id ? "active" : ""}>{link.icon}<span>{link.label}</span></a>)}
       </div>
       <div className="app-content">{children}</div>
-      <footer className="app-global-footer"><span>AI REEL FACTORY</span><span>Content operations workspace · v0.6</span></footer>
+      <footer className="app-global-footer"><span>AI REEL FACTORY</span><span>Content operations workspace · v0.7</span></footer>
     </div>
   );
 }
