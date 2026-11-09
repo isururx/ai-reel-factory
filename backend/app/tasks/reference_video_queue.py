@@ -33,8 +33,6 @@ def _context(job: ReferenceVideoJob) -> dict:
             "comment_count": job.comments_count,
         },
         "manual_comment_samples": (job.manual_comments or [])[:200],
-        "engagement_notes": job.engagement_notes,
-        "metrics_provenance": "Manually entered by the user; not independently verified.",
         "comment_sample_limitation": "User-supplied sample; may not represent all comments or viewers.",
     }
 
@@ -104,7 +102,6 @@ def drain_next_reference_video_job(self) -> dict:
                         shares_count=job.shares_count,
                         comments_count=job.comments_count,
                         manual_comments=job.manual_comments or [],
-                        engagement_notes=job.engagement_notes or "",
                         analysis_status="processing",
                     )
                     db.add(video)
