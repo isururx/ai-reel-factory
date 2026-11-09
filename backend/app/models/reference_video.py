@@ -27,7 +27,6 @@ class ReferenceVideo(Base):
     shares_count: Mapped[int | None] = mapped_column(Integer)
     comments_count: Mapped[int | None] = mapped_column(Integer)
     manual_comments: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    engagement_notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     analysis_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
     analysis_provider: Mapped[str | None] = mapped_column(String(40))
     analysis_model: Mapped[str | None] = mapped_column(String(160))
