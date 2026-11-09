@@ -67,3 +67,44 @@ def test_reference_video_queue_is_page_owner_scoped(client, monkeypatch):
     response = client.get(f"/api/v1/pages/{other_page['id']}/reference-videos/queue")
     assert response.status_code == 200
     assert response.json()["jobs"] == []
+
+
+def test_login_restricted_job_can_resume_with_manual_upload(client, monkeypatch):
+    from app.api.routes import reference_video_queue
+
+    monkeypatch.setattr(reference_video_queue.drain_next_reference_video_job, "delay", lambda: None)
+    monkeypatch.setattr(reference_video_queue, "upload_fileobj", lambda *args, **kwargs: "stored-key")
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    queued = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue",
+        json={
+            "source_url": "https://www.facebook.com/reel/123456",
+            "title": "Dog begs for Food",
+            "views_count": 25000,
+            "reactions_count": 900,
+            "manual_comments": ["Cute dog!", "So funny"],
+        },
+    )
+    assert queued.status_code == 202
+    job_id = queued.json()["id"]
+
+    # Simulate the worker pausing a Facebook URL that cannot be accessed without login.
+    from app.database.session import SessionLocal
+    from app.models.reference_video_job import ReferenceVideoJob
+    db = SessionLocal()
+    job = db.get(ReferenceVideoJob, job_id)
+    job.status = "needs_upload"
+    job.error_message = "Facebook requires login."
+    db.commit()
+    db.close()
+
+    uploaded = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue/{job_id}/upload",
+        files={"file": ("replacement.mp4", b"fake-video-bytes", "video/mp4")},
+    )
+    assert uploaded.status_code == 202, uploaded.text
+    payload = uploaded.json()
+    assert payload["status"] == "queued"
+    assert payload["source_url"] == "https://www.facebook.com/reel/123456"
+    assert payload["views_count"] == 25000
+    assert payload["reactions_count"] == 900
