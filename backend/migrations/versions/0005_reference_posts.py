@@ -37,7 +37,6 @@ def upgrade() -> None:
         sa.Column("shares_count", sa.Integer()),
         sa.Column("captured_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("available_fields", sa.JSON(), nullable=False, server_default=sa.text("'[]'")),
-        sa.UniqueConstraint("post_id", "captured_at", name="uq_reference_post_metric_snapshot"),
     )
     op.create_index("ix_reference_post_metrics_owner_id", "reference_post_metrics", ["owner_id"])
     op.create_index("ix_reference_post_metrics_post_id", "reference_post_metrics", ["post_id"])
