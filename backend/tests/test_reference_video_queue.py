@@ -18,7 +18,6 @@ def test_reference_video_submission_enters_fifo_queue(client, monkeypatch):
             "shares_count": 40,
             "comments_count": 70,
             "manual_comments": ["Great explanation", "Part two please"],
-            "engagement_notes": "Observed manually for testing.",
         },
     )
     second = client.post(
@@ -106,7 +105,6 @@ def test_failed_reference_video_job_can_be_retried(client, db_session, monkeypat
             "shares_count": 40,
             "comments_count": 70,
             "manual_comments": ["Great explanation"],
-            "engagement_notes": "Observed manually.",
         },
     )
     assert queued.status_code == 202
@@ -154,7 +152,7 @@ def test_analysis_attempt_history_is_page_owner_scoped(client, db_session):
         owner_id="test-user-0001", page_id=page["id"], reference_page_id=None,
         reference_post_id=None, title="Test video", source_url="https://www.facebook.com/reel/123456",
         object_key="reference-videos/test/attempt-log.mp4", original_filename="clip.mp4",
-        content_type="video/mp4", file_size=100, manual_comments=[], engagement_notes="",
+        content_type="video/mp4", file_size=100, manual_comments=[],
         analysis_status="completed", analysis_result={"summary": "Test"},
         analysis_provider="gemini", analysis_model="gemini-2.5-flash",
         analysis_attempt_count=2, analysis_total_duration_ms=12000,
