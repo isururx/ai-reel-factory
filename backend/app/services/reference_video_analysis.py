@@ -8,12 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import httpx
 from google import genai
 from google.genai import types
 
 from app.core.settings import settings
-from app.storage.r2 import create_download_url
 
 ANALYSIS_PROMPT = """You are the multimodal creative-analysis engine for a short-form video research platform.
 Analyze only the supplied video. Identify observable creative elements and abstract reusable techniques
@@ -132,45 +130,10 @@ def _gemini_analyze(file_path: str | Path, prompt: str, model_id: str) -> tuple[
                 pass
 
 
-def _nemotron_analyze(video_url: str, prompt: str, model_id: str) -> tuple[dict, int | None, int | None]:
-    """Call NVIDIA NIM's native video+audio chat-completions interface."""
-    if not settings.nvidia_api_key:
-        raise RuntimeError("NVIDIA_API_KEY is not configured.")
-    if not video_url:
-        raise RuntimeError("A temporary R2 video URL is required for Nemotron video input.")
-
-    base_url = (settings.nvidia_nim_base_url or "https://integrate.api.nvidia.com/v1").rstrip("/")
-    payload = {
-        "model": model_id,
-        "messages": [{"role": "user", "content": [
-            {"type": "video_url", "video_url": {"url": video_url}},
-            {"type": "text", "text": prompt},
-        ]}],
-        "mm_processor_kwargs": {"use_audio_in_video": True},
-        "response_format": {"type": "json_object"},
-        "temperature": 0.2,
-        "max_tokens": 12288,
-    }
-    with httpx.Client(timeout=httpx.Timeout(300.0, connect=20.0)) as client:
-        response = client.post(
-            f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {settings.nvidia_api_key}", "Content-Type": "application/json"},
-            json=payload,
-        )
-        response.raise_for_status()
-        data = response.json()
-
-    content = data["choices"][0]["message"]["content"]
-    if isinstance(content, list):
-        content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
-    usage = data.get("usage") or {}
-    return _parse_json(content), usage.get("prompt_tokens"), usage.get("completion_tokens")
-
-
 def configured_provider_chain(primary_provider: str | None = None, primary_model: str | None = None) -> list[tuple[str, str]]:
+    """Return the selected Gemini model followed by the one configured Gemini fallback."""
     defaults = [
         ("gemini", settings.gemini_analysis_model),
-        ("nemotron", settings.nemotron_analysis_model),
         ("gemini", settings.gemini_fallback_model),
     ]
     if primary_provider and primary_model:
@@ -184,7 +147,6 @@ def analyze_video_with_fallback(
     primary_provider: str | None = None, primary_model: str | None = None,
 ) -> AnalysisExecution:
     prompt = ANALYSIS_PROMPT.replace("{context}", json.dumps(context, ensure_ascii=False, default=str))
-    video_url = None
     attempts: list[ProviderAttempt] = []
     total_started = time.monotonic()
 
@@ -194,10 +156,6 @@ def analyze_video_with_fallback(
         try:
             if provider == "gemini":
                 result, input_tokens, output_tokens = _gemini_analyze(file_path, prompt, model_id)
-            elif provider == "nemotron":
-                if video_url is None and object_key:
-                    video_url = create_download_url(object_key, expires_in=1800)
-                result, input_tokens, output_tokens = _nemotron_analyze(video_url or "", prompt, model_id)
             else:
                 raise RuntimeError(f"Unsupported analysis provider: {provider}")
             duration_ms = int((time.monotonic() - timer) * 1000)
