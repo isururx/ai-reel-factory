@@ -35,7 +35,8 @@ def download_public_video(url: str) -> tuple[str, str, TemporaryDirectory]:
     output_dir = Path(temp_dir.name)
     options = {
         "outtmpl": str(output_dir / "%(id)s.%(ext)s"),
-        "format": "best[ext=mp4]/best",
+        # Keep reference-analysis downloads lightweight; never fetch above 720p.
+        "format": "best[height<=720][ext=mp4]/best[height<=720]",
         "merge_output_format": "mp4",
         "max_filesize": MAX_FILESIZE,
         "noplaylist": True,
