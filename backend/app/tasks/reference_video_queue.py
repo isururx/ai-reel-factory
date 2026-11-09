@@ -193,6 +193,18 @@ def drain_next_reference_video_job(self) -> dict:
                     if failed_video is not None and failed_video.analysis_status != "completed":
                         failed_video.analysis_status = "failed"
                         failed_video.analysis_result = {"error": str(exc)[:500]}
+                        failed_video.analysis_attempt_count = db.scalar(select(func.count(
+                            ReferenceVideoAnalysisAttempt.id
+                        )).where(
+                            ReferenceVideoAnalysisAttempt.reference_video_id == failed_video.id,
+                            ReferenceVideoAnalysisAttempt.owner_id == job.owner_id,
+                        )) or 0
+                        failed_video.analysis_total_duration_ms = db.scalar(select(func.sum(
+                            ReferenceVideoAnalysisAttempt.duration_ms
+                        )).where(
+                            ReferenceVideoAnalysisAttempt.reference_video_id == failed_video.id,
+                            ReferenceVideoAnalysisAttempt.owner_id == job.owner_id,
+                        ))
                 db.commit()
         return {"status": "failed", "job_id": job_id, "error": str(exc)[:500]}
     finally:
