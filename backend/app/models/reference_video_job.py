@@ -24,6 +24,8 @@ class ReferenceVideoJob(Base):
     comments_count: Mapped[int | None] = mapped_column(Integer)
     manual_comments: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     engagement_notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    analysis_primary_provider: Mapped[str | None] = mapped_column(String(40))
+    analysis_primary_model: Mapped[str | None] = mapped_column(String(160))
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="queued")
     queue_position: Mapped[int | None] = mapped_column(Integer)
     reference_video_id: Mapped[int | None] = mapped_column(ForeignKey("reference_videos.id", ondelete="SET NULL"))
