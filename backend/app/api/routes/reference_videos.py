@@ -1,5 +1,6 @@
 import json
 import mimetypes
+import tempfile
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,9 +12,11 @@ from app.core.auth import CurrentUser
 from app.database.session import get_db
 from app.models.reference import ReferencePage
 from app.models.reference_video import ReferenceVideo
+from app.models.reference_insight import ReferenceCreativeInsight
 from app.schemas.reference_videos import ReferenceVideoManualUpdate, ReferenceVideoRead
 from app.services.facebook_downloader import FacebookDownloadError, download_public_video
-from app.storage.r2 import create_download_url, upload_fileobj
+from app.storage.r2 import create_download_url, download_file, upload_fileobj
+from app.services.reference_video_analysis import analyze_video_file
 
 router = APIRouter(prefix="/pages/{page_id}/references/{reference_id}/videos", tags=["reference videos"])
 MAX_VIDEO_BYTES = 300 * 1024 * 1024
@@ -172,3 +175,84 @@ def get_reference_video_file(page_id: int, reference_id: int, video_id: int,
         return {"url": create_download_url(video.object_key), "expires_in": 900}
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Could not create a temporary video URL.") from exc
+
+
+
+@router.post("/{video_id}/analyze", response_model=ReferenceVideoRead)
+def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
+                            user: CurrentUser, db: Session = Depends(get_db)):
+    """Run Gemini multimodal analysis and save Page-scoped insights for human review."""
+    reference = _reference(page_id, reference_id, user.id, db)
+    video = db.scalar(select(ReferenceVideo).where(
+        ReferenceVideo.id == video_id,
+        ReferenceVideo.reference_page_id == reference.id,
+        ReferenceVideo.owner_id == user.id,
+    ))
+    if video is None:
+        raise HTTPException(status_code=404, detail="Reference video not found.")
+    if video.analysis_status == "processing":
+        raise HTTPException(status_code=409, detail="This video is already being analyzed.")
+
+    video.analysis_status = "processing"
+    video.analysis_result = {}
+    db.commit()
+    object_key = video.object_key
+    filename = video.original_filename
+    context = {
+        "title": video.title,
+        "manually_supplied_metrics": {
+            "views": video.views_count,
+            "reactions": video.reactions_count,
+            "shares": video.shares_count,
+            "comment_count": video.comments_count,
+        },
+        "manual_comment_samples": (video.manual_comments or [])[:200],
+        "engagement_notes": video.engagement_notes,
+        "metrics_provenance": "Manually entered by the user; not independently verified.",
+        "comment_sample_limitation": "User-supplied sample; may not represent all comments or viewers.",
+    }
+    db.close()
+
+    try:
+        suffix = Path(filename).suffix.lower() or ".mp4"
+        with tempfile.TemporaryDirectory(prefix="ai-reel-analysis-") as temp_dir:
+            local_path = Path(temp_dir) / f"reference{suffix}"
+            download_file(object_key, str(local_path))
+            analysis = analyze_video_file(local_path, context)
+
+        # Reuse the request session only after the long R2/Gemini work has finished.
+        video = db.scalar(select(ReferenceVideo).where(
+            ReferenceVideo.id == video_id,
+            ReferenceVideo.reference_page_id == reference_id,
+            ReferenceVideo.owner_id == user.id,
+        ))
+        if video is None:
+            raise HTTPException(status_code=404, detail="Reference video was removed during analysis.")
+        video.analysis_status = "completed"
+        video.analysis_result = analysis
+        insight = ReferenceCreativeInsight(
+            owner_id=user.id,
+            page_id=page_id,
+            reference_video_id=video.id,
+            title=f"Creative analysis: {video.title}"[:200],
+            content=analysis,
+            review_status="pending_review",
+        )
+        db.add(insight)
+        db.commit()
+        db.refresh(video)
+        return video
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        failed_video = db.scalar(select(ReferenceVideo).where(
+            ReferenceVideo.id == video_id,
+            ReferenceVideo.reference_page_id == reference_id,
+            ReferenceVideo.owner_id == user.id,
+        ))
+        if failed_video is not None:
+            failed_video.analysis_status = "failed"
+            failed_video.analysis_result = {"error": str(exc)[:500]}
+            db.commit()
+        raise HTTPException(status_code=502, detail=f"Video analysis failed: {str(exc)[:300]}") from exc
