@@ -1,4 +1,3 @@
-from pathlib import Path
 import re
 import shutil
 
@@ -28,7 +27,7 @@ def download_facebook_video(payload: FacebookDownloadRequest, _user: CurrentUser
     filename = f"{safe_title}.mp4"
     return FileResponse(
         path=file_path,
-        media_type="video/mp4",
-        filename=filename,
+        media_type="video/mp4" if Path(file_path).suffix.lower() == ".mp4" else "video/webm",
+        filename=f"{safe_title}{Path(file_path).suffix}",
         background=BackgroundTask(shutil.rmtree, temp_dir, ignore_errors=True),
     )
