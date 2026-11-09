@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import mimetypes
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -79,6 +80,8 @@ def drain_next_reference_video_job(self) -> dict:
                     return {"status": "needs_upload", "job_id": job.id}
                 try:
                     path = Path(file_path)
+                    local_path = Path(temp_dir) / path.name
+                    shutil.copy2(path, local_path)
                     size = path.stat().st_size
                     content_type = mimetypes.guess_type(path.name)[0] or "video/mp4"
                     object_key = f"reference-videos/{job.owner_id}/{job.page_id}/{uuid4().hex}{path.suffix.lower() or '.mp4'}"
