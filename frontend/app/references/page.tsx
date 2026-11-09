@@ -246,9 +246,8 @@ export default function ReferencesPage() {
                   </label>
                   <label className="block text-sm text-slate-300">Primary analysis model
                     <select value={primaryModel} onChange={e => setPrimaryModel(e.target.value)} className="field mt-2 max-w-xl">
-                      <option value="default">Default order: Gemini 3.5 → Nemotron Omni → Gemini 2.5</option>
+                      <option value="default">Default order: Gemini 3.5 → Gemini 2.5</option>
                       <option value="gemini|gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
-                      <option value="nemotron|nvidia/nemotron-3-nano-omni-30b-a3b-reasoning">Nemotron 3 Nano Omni 30B A3B</option>
                       <option value="gemini|gemini-2.5-flash">Gemini 2.5 Flash</option>
                     </select>
                     <span className="mt-1 block text-xs text-slate-500">Automatic fallback remains enabled. Selecting a model changes only the first attempt.</span>
