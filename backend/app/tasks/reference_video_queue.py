@@ -136,5 +136,6 @@ def drain_next_reference_video_job(self) -> dict:
         return {"status": "failed", "job_id": job_id, "error": str(exc)[:500]}
     finally:
         db.close()
-        # Drain the next FIFO item. The worker is configured with concurrency=1.
-        drain_next_reference_video_job.delay()
+        # Only schedule another drain after consuming a job; never create an idle loop.
+        if job_id is not None:
+            drain_next_reference_video_job.delay()
