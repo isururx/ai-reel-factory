@@ -22,7 +22,6 @@ def test_upload_reference_video_stores_manual_metrics_and_comments(client, monke
             "shares_count": "35",
             "comments_count": "62",
             "manual_comments_json": '["Amazing explanation", "Please make part two"]',
-            "engagement_notes": "Counts manually observed for testing.",
         },
     )
     assert response.status_code == 201, response.text
