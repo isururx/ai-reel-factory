@@ -30,6 +30,7 @@ The strict FIFO guarantee depends on running only one worker process with concur
 - `POST /api/v1/pages/{page_id}/reference-videos/queue` — submit URL and manual context; returns 202.
 - `GET /api/v1/pages/{page_id}/reference-videos/queue` — queue status and positions.
 - `GET /api/v1/pages/{page_id}/reference-videos` — completed analyses for the selected Page.
+- `POST /api/v1/pages/{page_id}/reference-videos/queue/{job_id}/upload` — attach a user-provided video to a `needs_upload` job and resume processing.
 - `GET /api/v1/pages/{page_id}/reference-videos/{video_id}/file` — short-lived signed R2 URL.
 
 Example submission:
@@ -84,7 +85,7 @@ Existing reference videos are backfilled to their Page workspace by migration 00
 
 ## Operational notes
 
-- Only public videos accessible without signing in are supported; no cookies, login sessions or access-control bypass.
+- Automatic downloads are limited to public videos accessible without signing in; no cookies, login sessions or access-control bypass. When a URL requires login, users can upload a video file they are authorized to use (MP4, WebM, MOV or MKV, maximum 300 MB). The uploaded file follows the same R2 → Gemini analysis pipeline.
 - Downloads remain capped by the downloader's 720p preference, 15-minute duration and 300 MB limit.
 - Analysis is performed in the worker, not inside the HTTP request.
 - The worker is deliberately single-consumer for FIFO ordering.
