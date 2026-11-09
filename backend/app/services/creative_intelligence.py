@@ -225,6 +225,11 @@ def persist_creative_intelligence(
                 (previous * prior_occurrences + confidence) / (prior_occurrences + 1), 3
             )
 
+    # The test and production sessions may disable autoflush. Flush the newly
+    # added PatternEvidence rows before querying, otherwise the current video's
+    # evidence is omitted from the distinct-video count.
+    db.flush()
+
     for pattern_id in matched_patterns:
         pattern = db.get(CreativePattern, pattern_id)
         if pattern is None:
