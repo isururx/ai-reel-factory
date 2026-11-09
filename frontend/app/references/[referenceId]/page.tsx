@@ -65,7 +65,6 @@ export default function ReferencePostsPage() {
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Collect permitted public post metadata and available interaction counts. No third-party video files are downloaded.</p>
               <a href={`/references/${referenceId}/videos?pageId=${pageId}`} className="mt-3 inline-flex rounded-lg border border-cyan-300/20 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-300/10">Open video library →</a>
             </div>
-            </div>
             <button onClick={() => void collect()} disabled={collecting || !pageId || !referenceId} className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50">{collecting ? "Collecting…" : "Collect latest posts"}</button>
           </header>
 
