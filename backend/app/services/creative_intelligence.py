@@ -50,7 +50,8 @@ def _extract_candidates(analysis: dict) -> list[dict]:
     candidates = list(raw) if isinstance(raw, list) else []
 
     hook = analysis.get("hook_analysis")
-    if isinstance(hook, dict):
+    has_hook_element = any(isinstance(item, dict) and item.get("element_type") == "hook" for item in candidates)
+    if isinstance(hook, dict) and not has_hook_element:
         hook_type = _text(hook.get("hook_type")) or "other"
         candidates.append({
             "element_type": "hook",
@@ -66,33 +67,6 @@ def _extract_candidates(analysis: dict) -> list[dict]:
             "emotional_triggers": hook.get("emotional_trigger", []),
             "confidence": hook.get("confidence"),
         })
-
-    timeline = analysis.get("story_timeline")
-    if isinstance(timeline, list):
-        for beat in timeline:
-            if isinstance(beat, dict):
-                candidates.append({
-                    "element_type": "storytelling",
-                    "name": f"{_text(beat.get('stage')) or 'Story'} Beat",
-                    "description": _text(beat.get("description")),
-                    "start_seconds": beat.get("start_seconds"),
-                    "end_seconds": beat.get("end_seconds"),
-                    "reusable_construction": _text(beat.get("description")),
-                    "confidence": "medium",
-                })
-
-    visual = analysis.get("visual_analysis")
-    if isinstance(visual, dict) and isinstance(visual.get("scene_changes"), list):
-        for scene in visual["scene_changes"]:
-            if isinstance(scene, dict):
-                candidates.append({
-                    "element_type": "visual",
-                    "name": "Scene Change",
-                    "description": _text(scene.get("description")),
-                    "start_seconds": scene.get("start_seconds"),
-                    "reusable_construction": _text(scene.get("description")),
-                    "confidence": "medium",
-                })
 
     # Backward compatibility for analyses saved before the structured schema.
     if not candidates:
