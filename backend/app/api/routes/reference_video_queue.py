@@ -158,8 +158,8 @@ def list_page_reference_videos(page_id: int, user: CurrentUser, db: Session = De
     return list(db.scalars(select(ReferenceVideo).where(
         ReferenceVideo.page_id == page_id,
         ReferenceVideo.owner_id == user.id,
-        ReferenceVideo.analysis_status == "completed",
-    ).order_by(ReferenceVideo.analyzed_at.desc(), ReferenceVideo.id.desc())).all())
+        ReferenceVideo.analysis_status.in_(( "completed", "failed")),
+    ).order_by(ReferenceVideo.updated_at.desc(), ReferenceVideo.id.desc())).all())
 
 
 @router.get("/{video_id}/analysis-attempts")
