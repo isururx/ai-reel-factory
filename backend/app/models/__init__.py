@@ -4,10 +4,11 @@ from app.models.content import ContentScript, ScriptVersion, ApprovalEvent
 from app.models.trend import TrendItem, PageTrendRecommendation
 from app.models.reference import ReferencePage
 from app.models.reference_post import ReferencePost, ReferencePostMetric
+from app.models.reference_video import ReferenceVideo
 
 __all__ = [
     "Page", "PageProfile", "PageStrategy", "StrategyVersion",
     "ContentScript", "ScriptVersion", "ApprovalEvent",
     "TrendItem", "PageTrendRecommendation", "ReferencePage",
-    "ReferencePost", "ReferencePostMetric",
+    "ReferencePost", "ReferencePostMetric", "ReferenceVideo",
 ]
