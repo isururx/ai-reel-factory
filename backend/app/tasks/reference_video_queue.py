@@ -14,10 +14,11 @@ from app.database.session import SessionLocal
 from app.models.page import Page
 from app.models.reference_video import ReferenceVideo
 from app.models.reference_video_job import ReferenceVideoJob
+from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
 from app.models.reference_insight import ReferenceCreativeInsight
 from app.services.creative_intelligence import persist_creative_intelligence
 from app.services.facebook_downloader import FacebookDownloadError, download_public_video
-from app.services.reference_video_analysis import analyze_video_file
+from app.services.reference_video_analysis import analyze_video_with_fallback
 from app.storage.r2 import download_file, upload_fileobj
 from app.worker import celery_app
 
@@ -119,10 +120,41 @@ def drain_next_reference_video_job(self) -> dict:
 
             video.analysis_status = "processing"
             db.commit()
-            analysis = analyze_video_file(local_path, _context(job))
+            try:
+                execution = analyze_video_with_fallback(
+                    local_path, _context(job), object_key=video.object_key,
+                    primary_provider=job.analysis_primary_provider, primary_model=job.analysis_primary_model,
+                )
+            except Exception as analysis_exc:
+                for index, attempt in enumerate(getattr(analysis_exc, "attempts", []), start=1):
+                    db.add(ReferenceVideoAnalysisAttempt(
+                        owner_id=job.owner_id, page_id=job.page_id, reference_video_id=video.id,
+                        job_id=job.id, attempt_number=index, provider=attempt.provider,
+                        model_id=attempt.model_id, status=attempt.status, error_code=attempt.error_code,
+                        error_message=attempt.error_message, duration_ms=attempt.duration_ms,
+                        input_tokens=attempt.input_tokens, output_tokens=attempt.output_tokens,
+                        started_at=attempt.started_at, completed_at=attempt.completed_at,
+                    ))
+                db.commit()
+                raise
+
+            analysis = execution.result
             video.analysis_status = "completed"
             video.analysis_result = analysis
+            video.analysis_provider = execution.provider
+            video.analysis_model = execution.model_id
+            video.analysis_attempt_count = len(execution.attempts)
+            video.analysis_total_duration_ms = execution.total_duration_ms
             video.analyzed_at = datetime.now(timezone.utc)
+            for index, attempt in enumerate(execution.attempts, start=1):
+                db.add(ReferenceVideoAnalysisAttempt(
+                    owner_id=job.owner_id, page_id=job.page_id, reference_video_id=video.id,
+                    job_id=job.id, attempt_number=index, provider=attempt.provider,
+                    model_id=attempt.model_id, status=attempt.status, error_code=attempt.error_code,
+                    error_message=attempt.error_message, duration_ms=attempt.duration_ms,
+                    input_tokens=attempt.input_tokens, output_tokens=attempt.output_tokens,
+                    started_at=attempt.started_at, completed_at=attempt.completed_at,
+                ))
             intelligence_result = persist_creative_intelligence(
                 db, owner_id=job.owner_id, page_id=page.id, video=video, analysis=analysis
             )
