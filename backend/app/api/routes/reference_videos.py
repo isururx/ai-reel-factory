@@ -1,8 +1,6 @@
 import json
 import mimetypes
-import re
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
