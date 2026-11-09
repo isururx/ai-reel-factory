@@ -52,6 +52,64 @@ def test_reference_video_queue_rejects_non_facebook_urls(client):
     assert response.status_code == 422
 
 
+def test_failed_reference_video_job_can_be_retried(client, db_session, monkeypatch):
+    from app.api.routes import reference_video_queue
+    from app.models.reference_video_job import ReferenceVideoJob
+
+    dispatched = []
+    monkeypatch.setattr(
+        reference_video_queue.drain_next_reference_video_job,
+        "delay",
+        lambda: dispatched.append("drain"),
+    )
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    queued = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue",
+        json={
+            "source_url": "https://www.facebook.com/reel/123456",
+            "views_count": 12000,
+            "reactions_count": 850,
+            "shares_count": 40,
+            "comments_count": 70,
+            "manual_comments": ["Great explanation"],
+            "engagement_notes": "Observed manually.",
+        },
+    )
+    assert queued.status_code == 202
+    job = db_session.get(ReferenceVideoJob, queued.json()["id"])
+    job.status = "failed"
+    job.error_message = "Gemini temporarily unavailable (503)."
+    db_session.commit()
+
+    retried = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue/{job.id}/retry"
+    )
+    assert retried.status_code == 202, retried.text
+    payload = retried.json()
+    assert payload["status"] == "queued"
+    assert payload["error_message"] is None
+    assert payload["views_count"] == 12000
+    assert payload["reactions_count"] == 850
+    assert payload["shares_count"] == 40
+    assert payload["comments_count"] == 70
+    assert len(dispatched) == 2
+
+
+def test_only_failed_reference_video_jobs_can_be_retried(client, monkeypatch):
+    from app.api.routes import reference_video_queue
+
+    monkeypatch.setattr(reference_video_queue.drain_next_reference_video_job, "delay", lambda: None)
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    queued = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue",
+        json={"source_url": "https://www.facebook.com/reel/123456"},
+    )
+    response = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue/{queued.json()['id']}/retry"
+    )
+    assert response.status_code == 409
+
+
 def test_reference_video_queue_is_page_owner_scoped(client, monkeypatch):
     from app.api.routes import reference_video_queue
 

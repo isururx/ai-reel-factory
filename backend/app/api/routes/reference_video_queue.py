@@ -73,6 +73,60 @@ def enqueue_reference_video(page_id: int, payload: ReferenceVideoQueueCreate,
     return job
 
 
+@router.post("/queue/{job_id}/retry", response_model=ReferenceVideoQueueJobRead, status_code=202)
+def retry_failed_reference_video_job(
+    page_id: int,
+    job_id: int,
+    user: CurrentUser,
+    db: Session = Depends(get_db),
+):
+    """Requeue a failed analysis while preserving its URL and manually entered context."""
+    _owned_page(page_id, user, db)
+    job = db.scalar(select(ReferenceVideoJob).where(
+        ReferenceVideoJob.id == job_id,
+        ReferenceVideoJob.page_id == page_id,
+        ReferenceVideoJob.owner_id == user.id,
+    ))
+    if job is None:
+        raise HTTPException(status_code=404, detail="Queue job not found.")
+    if job.status != "failed":
+        raise HTTPException(status_code=409, detail="Only failed jobs can be retried.")
+
+    # A retry joins the back of the FIFO queue rather than jumping ahead of
+    # jobs submitted while the original attempt was running.
+    job.status = "queued"
+    job.created_at = datetime.now(timezone.utc)
+    job.queue_position = None
+    job.started_at = None
+    job.completed_at = None
+    job.error_message = None
+    if job.reference_video_id is not None:
+        video = db.get(ReferenceVideo, job.reference_video_id)
+        if video is not None:
+            video.analysis_status = "pending"
+            video.analysis_result = {}
+            video.analyzed_at = None
+    db.commit()
+    db.refresh(job)
+
+    position = db.scalar(select(func.count(ReferenceVideoJob.id)).where(
+        ReferenceVideoJob.status == "queued",
+        (ReferenceVideoJob.created_at < job.created_at) |
+        ((ReferenceVideoJob.created_at == job.created_at) & (ReferenceVideoJob.id <= job.id)),
+    )) or 1
+    job.queue_position = int(position)
+    db.commit()
+    db.refresh(job)
+
+    try:
+        drain_next_reference_video_job.delay()
+    except Exception as exc:
+        job.error_message = "Retry saved in the queue, but the worker could not be notified. Check Redis and start the worker."
+        db.commit()
+        raise HTTPException(status_code=503, detail=job.error_message) from exc
+    return job
+
+
 @router.get("/queue", response_model=ReferenceVideoQueueJobList)
 def list_reference_video_jobs(page_id: int, user: CurrentUser, db: Session = Depends(get_db)):
     _owned_page(page_id, user, db)

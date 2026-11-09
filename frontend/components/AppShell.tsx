@@ -3,12 +3,13 @@
 import type { ReactNode } from "react";
 import AuthActions from "@/components/AuthActions";
 
-type AppSection = "overview" | "trends" | "strategies" | "scripts" | "references";
+type AppSection = "overview" | "trends" | "strategies" | "scripts" | "references" | "intelligence";
 
 const links: { id: AppSection; label: string; href: string; icon: string }[] = [
   { id: "overview", label: "Overview", href: "/", icon: "◫" },
   { id: "trends", label: "Discover", href: "/trends", icon: "⌁" },
   { id: "references", label: "References", href: "/references", icon: "◎" },
+  { id: "intelligence", label: "Creative AI", href: "/creative-intelligence", icon: "✧" },
   { id: "strategies", label: "Strategies", href: "/strategies", icon: "◈" },
   { id: "scripts", label: "Script studio", href: "/scripts", icon: "▤" },
 ];

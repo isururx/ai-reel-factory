@@ -10,6 +10,7 @@ from app.api.routes.reference_posts import router as reference_posts_router
 from app.api.routes.reference_videos import router as reference_videos_router
 from app.api.routes.reference_insights import router as reference_insights_router
 from app.api.routes.reference_video_queue import router as reference_video_queue_router
+from app.api.routes.creative_intelligence import router as creative_intelligence_router
 from app.core.settings import settings
 
 app = FastAPI(
@@ -35,6 +36,7 @@ app.include_router(reference_posts_router, prefix="/api/v1")
 app.include_router(reference_videos_router, prefix="/api/v1")
 app.include_router(reference_insights_router, prefix="/api/v1")
 app.include_router(reference_video_queue_router, prefix="/api/v1")
+app.include_router(creative_intelligence_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["system"])
