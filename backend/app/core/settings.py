@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_analysis_model: str = "gemini-3.5-flash-lite"
     gemini_fallback_model: str = "gemini-2.5-flash"
-    nvidia_api_key: str | None = None
-    nvidia_nim_base_url: str = "https://integrate.api.nvidia.com/v1"
-    nemotron_analysis_model: str = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
     llm_api_key: str | None = None
     llm_base_url: str | None = None
     meta_access_token: str | None = None
