@@ -10,7 +10,6 @@ class ReferenceVideoQueueCreate(BaseModel):
     shares_count: int | None = Field(default=None, ge=0)
     comments_count: int | None = Field(default=None, ge=0)
     manual_comments: list[str] = Field(default_factory=list, max_length=200)
-    engagement_notes: str = Field(default="", max_length=10000)
     analysis_primary_provider: str | None = Field(default=None, pattern="^gemini$")
     analysis_primary_model: str | None = Field(default=None, max_length=160)
 
@@ -69,7 +68,6 @@ class ReferenceVideoRead(BaseModel):
     shares_count: int | None
     comments_count: int | None
     manual_comments: list[str]
-    engagement_notes: str
     analysis_status: str
     analysis_result: dict
     analysis_provider: str | None = None
