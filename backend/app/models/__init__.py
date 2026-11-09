@@ -8,11 +8,12 @@ from app.models.reference_video import ReferenceVideo
 from app.models.reference_insight import ReferenceCreativeInsight
 from app.models.reference_video_job import ReferenceVideoJob
 from app.models.creative_intelligence import CreativeElement, CreativePattern, PatternEvidence
+from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
 
 __all__ = [
     "Page", "PageProfile", "PageStrategy", "StrategyVersion",
     "ContentScript", "ScriptVersion", "ApprovalEvent",
     "TrendItem", "PageTrendRecommendation", "ReferencePage",
     "ReferencePost", "ReferencePostMetric", "ReferenceVideo", "ReferenceCreativeInsight", "ReferenceVideoJob",
-    "CreativeElement", "CreativePattern", "PatternEvidence",
+    "CreativeElement", "CreativePattern", "PatternEvidence", "ReferenceVideoAnalysisAttempt",
 ]
