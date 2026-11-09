@@ -44,7 +44,6 @@ Example submission:
   "shares_count": 40,
   "comments_count": 70,
   "manual_comments": ["Great explanation", "Part two please"],
-  "engagement_notes": "Observed manually on 9 Nov."
 }
 ```
 
