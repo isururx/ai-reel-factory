@@ -144,6 +144,51 @@ def test_only_failed_reference_video_jobs_can_be_retried(client, monkeypatch):
     assert response.status_code == 409
 
 
+def test_analysis_attempt_history_is_page_owner_scoped(client, db_session):
+    from datetime import datetime, timezone
+    from app.models.reference_video import ReferenceVideo
+    from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
+
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    video = ReferenceVideo(
+        owner_id="test-user-0001", page_id=page["id"], reference_page_id=None,
+        reference_post_id=None, title="Test video", source_url="https://www.facebook.com/reel/123456",
+        object_key="reference-videos/test/attempt-log.mp4", original_filename="clip.mp4",
+        content_type="video/mp4", file_size=100, manual_comments=[], engagement_notes="",
+        analysis_status="completed", analysis_result={"summary": "Test"},
+        analysis_provider="qwen", analysis_model="qwen3.8-flash",
+        analysis_attempt_count=2, analysis_total_duration_ms=12000,
+    )
+    db_session.add(video)
+    db_session.commit()
+    db_session.refresh(video)
+    db_session.add_all([
+        ReferenceVideoAnalysisAttempt(
+            owner_id="test-user-0001", page_id=page["id"], reference_video_id=video.id,
+            attempt_number=1, provider="gemini", model_id="gemini-3.5-flash-lite",
+            status="failed", error_code="503", error_message="Unavailable", duration_ms=2000,
+            started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc),
+        ),
+        ReferenceVideoAnalysisAttempt(
+            owner_id="test-user-0001", page_id=page["id"], reference_video_id=video.id,
+            attempt_number=2, provider="qwen", model_id="qwen3.8-flash",
+            status="completed", duration_ms=10000, input_tokens=100, output_tokens=50,
+            started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc),
+        ),
+    ])
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/pages/{page['id']}/reference-videos/{video.id}/analysis-attempts"
+    )
+    assert response.status_code == 200
+    assert [item["model_id"] for item in response.json()] == [
+        "gemini-3.5-flash-lite", "qwen3.8-flash"
+    ]
+    assert response.json()[0]["status"] == "failed"
+    assert response.json()[1]["status"] == "completed"
+
+
 def test_reference_video_queue_is_page_owner_scoped(client, monkeypatch):
     from app.api.routes import reference_video_queue
 
