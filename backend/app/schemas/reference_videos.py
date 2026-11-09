@@ -5,7 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class ReferenceVideoRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    reference_page_id: int
+    page_id: int | None
+    reference_page_id: int | None
     reference_post_id: int | None
     title: str
     source_url: str | None
@@ -20,6 +21,7 @@ class ReferenceVideoRead(BaseModel):
     engagement_notes: str
     analysis_status: str
     analysis_result: dict
+    analyzed_at: datetime | None
     created_at: datetime
 
 
