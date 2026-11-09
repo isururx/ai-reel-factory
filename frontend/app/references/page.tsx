@@ -125,11 +125,11 @@ export default function ReferencesPage() {
         <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
           <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">CONTENT INTELLIGENCE · R1</p>
+              <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">CONTENT INTELLIGENCE · R1 + R2</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Reference Intelligence</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Build a separate reference library for each of your content brands by saving public Facebook Page links.</p>
             </div>
-            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">SOURCE REGISTRY</span>
+            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">SOURCE REGISTRY + POST ANALYTICS</span>
           </header>
 
           {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
@@ -190,6 +190,7 @@ export default function ReferencesPage() {
                             </div>
                             <h3 className="truncate text-lg font-semibold">{item.display_name || "Unnamed reference Page"}</h3>
                             <a href={item.normalized_url} target="_blank" rel="noreferrer" className="mt-1 block break-all text-xs text-cyan-300 hover:text-cyan-200">{item.normalized_url} ↗</a>
+                            <a href={`/references/${item.id}?pageId=${pageId}`} className="mt-2 inline-block text-xs font-semibold text-cyan-200 hover:text-cyan-100">View collected posts →</a>
                           </div>
                           <span className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-slate-500">#{item.id}</span>
                         </div>
