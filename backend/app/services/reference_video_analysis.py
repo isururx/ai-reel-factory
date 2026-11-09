@@ -66,6 +66,7 @@ class ProviderAttempt:
     model_id: str
     status: str
     started_at: datetime
+    completed_at: datetime
     duration_ms: int
     error_code: str | None = None
     error_message: str | None = None
@@ -190,7 +191,7 @@ def analyze_video_with_fallback(
             else:
                 raise RuntimeError(f"Unsupported analysis provider: {provider}")
             duration_ms = int((time.monotonic() - timer) * 1000)
-            attempts.append(ProviderAttempt(provider, model_id, "completed", attempt_started, duration_ms,
+            attempts.append(ProviderAttempt(provider, model_id, "completed", attempt_started, datetime.now(timezone.utc), duration_ms,
                 input_tokens=input_tokens, output_tokens=output_tokens))
             return AnalysisExecution(result, provider, model_id, attempts,
                 int((time.monotonic() - total_started) * 1000))
@@ -198,7 +199,7 @@ def analyze_video_with_fallback(
             duration_ms = int((time.monotonic() - timer) * 1000)
             response = getattr(exc, "response", None)
             code = str(getattr(response, "status_code", None) or getattr(exc, "code", None) or type(exc).__name__)[:80]
-            attempts.append(ProviderAttempt(provider, model_id, "failed", attempt_started, duration_ms,
+            attempts.append(ProviderAttempt(provider, model_id, "failed", attempt_started, datetime.now(timezone.utc), duration_ms,
                 error_code=code, error_message=str(exc)[:2000]))
             # Immediate fallback: no retry/backoff. Continue to the next configured provider.
     summary = "; ".join(f"{a.provider}/{a.model_id}: {a.error_code}" for a in attempts)
