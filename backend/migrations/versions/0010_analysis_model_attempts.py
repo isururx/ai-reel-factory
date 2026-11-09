@@ -13,6 +13,8 @@ def upgrade() -> None:
     op.add_column("reference_videos", sa.Column("analysis_model", sa.String(160), nullable=True))
     op.add_column("reference_videos", sa.Column("analysis_attempt_count", sa.Integer(), nullable=False, server_default="0"))
     op.add_column("reference_videos", sa.Column("analysis_total_duration_ms", sa.Integer(), nullable=True))
+    op.add_column("reference_video_jobs", sa.Column("analysis_primary_provider", sa.String(40), nullable=True))
+    op.add_column("reference_video_jobs", sa.Column("analysis_primary_model", sa.String(160), nullable=True))
     op.create_table(
         "reference_video_analysis_attempts",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -42,4 +44,6 @@ def downgrade() -> None:
     op.drop_column("reference_videos", "analysis_total_duration_ms")
     op.drop_column("reference_videos", "analysis_attempt_count")
     op.drop_column("reference_videos", "analysis_model")
+    op.drop_column("reference_video_jobs", "analysis_primary_model")
+    op.drop_column("reference_video_jobs", "analysis_primary_provider")
     op.drop_column("reference_videos", "analysis_provider")
