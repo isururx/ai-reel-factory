@@ -61,6 +61,7 @@ export default function ReferencesPage() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [retryingJobId, setRetryingJobId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -155,6 +156,22 @@ export default function ReferencesPage() {
     }
   }
 
+  async function retryJob(jobId: number) {
+    if (pageId === "") return;
+    setRetryingJobId(jobId); setError(""); setNotice("");
+    try {
+      const job = await api<Job>(`/pages/${pageId}/reference-videos/queue/${jobId}/retry`, {
+        method: "POST",
+      });
+      await refresh();
+      setNotice(`Retry added to the FIFO queue. Queue position: ${job.queue_position ?? "calculating"}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not retry this analysis.");
+    } finally {
+      setRetryingJobId(null);
+    }
+  }
+
   async function openVideo(videoId: number) {
     try {
       const result = await api<{ url: string }>(`/pages/${pageId}/reference-videos/${videoId}/file`);
@@ -244,6 +261,19 @@ export default function ReferencesPage() {
                         <span className={`rounded-lg border px-3 py-1.5 text-xs ${job.status === "completed" ? "border-emerald-300/20 text-emerald-200" : job.status === "failed" ? "border-rose-300/20 text-rose-200" : job.status === "processing" ? "border-cyan-300/20 text-cyan-200" : "border-amber-300/20 text-amber-200"}`}>{job.status === "queued" && job.queue_position ? `Queued #${job.queue_position}` : job.status}</span>
                       </div>
                       {job.error_message && <p className="mt-3 text-xs text-rose-200">{job.error_message}</p>}
+                      {job.status === "failed" && (
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-300/5 p-3">
+                          <p className="text-xs leading-5 text-slate-300">This attempt failed. You can retry the same video analysis; the original URL and manually entered engagement details will be preserved.</p>
+                          <button
+                            type="button"
+                            onClick={() => void retryJob(job.id)}
+                            disabled={retryingJobId !== null}
+                            className="shrink-0 rounded-lg bg-cyan-300 px-4 py-2 text-xs font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {retryingJobId === job.id ? "Re-queueing…" : "↻ Retry analysis"}
+                          </button>
+                        </div>
+                      )}
                       {job.status === "needs_upload" && (
                         <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3">
                           <p className="text-xs leading-5 text-amber-100">Facebook requires login for this video. Upload a video file you have permission to use; the original URL and engagement details will be kept.</p>
