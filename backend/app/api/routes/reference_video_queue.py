@@ -9,6 +9,7 @@ from app.database.session import get_db
 from app.models.page import Page
 from app.models.reference_video import ReferenceVideo
 from app.models.reference_video_job import ReferenceVideoJob
+from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
 from app.schemas.reference_video_queue import (
     ReferenceVideoQueueCreate, ReferenceVideoQueueJobList,
     ReferenceVideoQueueJobRead, ReferenceVideoRead,
@@ -159,6 +160,31 @@ def list_page_reference_videos(page_id: int, user: CurrentUser, db: Session = De
         ReferenceVideo.owner_id == user.id,
         ReferenceVideo.analysis_status == "completed",
     ).order_by(ReferenceVideo.analyzed_at.desc(), ReferenceVideo.id.desc())).all())
+
+
+@router.get("/{video_id}/analysis-attempts")
+def list_video_analysis_attempts(page_id: int, video_id: int, user: CurrentUser,
+                                 db: Session = Depends(get_db)):
+    _owned_page(page_id, user, db)
+    video = db.scalar(select(ReferenceVideo).where(
+        ReferenceVideo.id == video_id,
+        ReferenceVideo.page_id == page_id,
+        ReferenceVideo.owner_id == user.id,
+    ))
+    if video is None:
+        raise HTTPException(status_code=404, detail="Analyzed video not found.")
+    attempts = db.scalars(select(ReferenceVideoAnalysisAttempt).where(
+        ReferenceVideoAnalysisAttempt.reference_video_id == video_id,
+        ReferenceVideoAnalysisAttempt.owner_id == user.id,
+        ReferenceVideoAnalysisAttempt.page_id == page_id,
+    ).order_by(ReferenceVideoAnalysisAttempt.attempt_number.asc())).all()
+    return [{
+        "id": item.id, "attempt_number": item.attempt_number, "provider": item.provider,
+        "model_id": item.model_id, "status": item.status, "error_code": item.error_code,
+        "error_message": item.error_message, "duration_ms": item.duration_ms,
+        "input_tokens": item.input_tokens, "output_tokens": item.output_tokens,
+        "started_at": item.started_at, "completed_at": item.completed_at,
+    } for item in attempts]
 
 
 @router.get("/{video_id}/file")
