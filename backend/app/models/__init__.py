@@ -6,10 +6,11 @@ from app.models.reference import ReferencePage
 from app.models.reference_post import ReferencePost, ReferencePostMetric
 from app.models.reference_video import ReferenceVideo
 from app.models.reference_insight import ReferenceCreativeInsight
+from app.models.reference_video_job import ReferenceVideoJob
 
 __all__ = [
     "Page", "PageProfile", "PageStrategy", "StrategyVersion",
     "ContentScript", "ScriptVersion", "ApprovalEvent",
     "TrendItem", "PageTrendRecommendation", "ReferencePage",
-    "ReferencePost", "ReferencePostMetric", "ReferenceVideo", "ReferenceCreativeInsight",
+    "ReferencePost", "ReferencePostMetric", "ReferenceVideo", "ReferenceCreativeInsight", "ReferenceVideoJob",
 ]

@@ -1,6 +1,7 @@
 import json
 import mimetypes
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -230,6 +231,7 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
             raise HTTPException(status_code=404, detail="Reference video was removed during analysis.")
         video.analysis_status = "completed"
         video.analysis_result = analysis
+        video.analyzed_at = datetime.now(timezone.utc)
         insight = ReferenceCreativeInsight(
             owner_id=user.id,
             page_id=page_id,
