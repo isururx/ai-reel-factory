@@ -64,7 +64,6 @@ export default function ReferencesPage() {
   const [shares, setShares] = useState("");
   const [commentsCount, setCommentsCount] = useState("");
   const [commentsText, setCommentsText] = useState("");
-  const [notes, setNotes] = useState("");
   const [primaryModel, setPrimaryModel] = useState("default");
   const [attemptLogs, setAttemptLogs] = useState<Record<number, Attempt[]>>({});
   const [loadingLogs, setLoadingLogs] = useState<number | null>(null);
@@ -124,7 +123,6 @@ export default function ReferencesPage() {
         shares_count: shares === "" ? null : Number(shares),
         comments_count: commentsCount === "" ? null : Number(commentsCount),
         manual_comments: commentsText.split("\n").map(x => x.trim()).filter(Boolean),
-        engagement_notes: notes.trim(),
         analysis_primary_provider: primaryModel === "default" ? null : primaryModel.split("|")[0],
         analysis_primary_model: primaryModel === "default" ? null : primaryModel.split("|")[1],
       };
@@ -132,7 +130,7 @@ export default function ReferencesPage() {
         method: "POST", body: JSON.stringify(payload),
       });
       setUrl(""); setTitle(""); setViews(""); setReactions(""); setShares("");
-      setCommentsCount(""); setCommentsText(""); setNotes(""); setPrimaryModel("default");
+      setCommentsCount(""); setCommentsText(""); setPrimaryModel("default");
       await refresh();
       setNotice(`Video added to the FIFO queue. Queue position: ${job.queue_position ?? "calculating"}.`);
     } catch (e) {
@@ -269,9 +267,6 @@ export default function ReferencesPage() {
 
                   <label className="block text-sm text-slate-300">Comment samples <span className="text-xs text-slate-500">(one comment per line)</span>
                     <textarea value={commentsText} onChange={e => setCommentsText(e.target.value)} rows={4} placeholder="This is so interesting!&#10;Please make another video about this." className="field mt-2" />
-                  </label>
-                  <label className="block text-sm text-slate-300">Notes / source of metrics
-                    <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="e.g. observed on 9 Nov; counts may change over time" className="field mt-2" />
                   </label>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs text-slate-500">If Facebook requires login, the job will pause and offer a manual MP4/video upload instead.</p>
