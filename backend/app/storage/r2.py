@@ -48,3 +48,11 @@ def create_download_url(object_key: str, expires_in: int = 900) -> str:
         Params={"Bucket": settings.r2_bucket_name, "Key": object_key},
         ExpiresIn=expires_in,
     )
+
+
+
+def download_file(object_key: str, destination: str) -> None:
+    """Download a private R2 object to a local temporary path."""
+    if not object_key or object_key.startswith("/"):
+        raise ValueError("object_key must be a non-empty relative key")
+    get_r2_client().download_file(settings.r2_bucket_name, object_key, destination)
