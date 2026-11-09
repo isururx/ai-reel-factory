@@ -43,6 +43,40 @@ def test_reference_video_submission_enters_fifo_queue(client, monkeypatch):
     ]
 
 
+def test_reference_video_queue_accepts_manual_primary_model(client, monkeypatch):
+    from app.api.routes import reference_video_queue
+
+    monkeypatch.setattr(reference_video_queue.drain_next_reference_video_job, "delay", lambda: None)
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    response = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue",
+        json={
+            "source_url": "https://www.facebook.com/reel/123456",
+            "analysis_primary_provider": "qwen",
+            "analysis_primary_model": "qwen3.8-flash",
+        },
+    )
+    assert response.status_code == 202, response.text
+    assert response.json()["analysis_primary_provider"] == "qwen"
+    assert response.json()["analysis_primary_model"] == "qwen3.8-flash"
+
+
+def test_reference_video_queue_rejects_unsupported_manual_model(client, monkeypatch):
+    from app.api.routes import reference_video_queue
+
+    monkeypatch.setattr(reference_video_queue.drain_next_reference_video_job, "delay", lambda: None)
+    page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
+    response = client.post(
+        f"/api/v1/pages/{page['id']}/reference-videos/queue",
+        json={
+            "source_url": "https://www.facebook.com/reel/123456",
+            "analysis_primary_provider": "qwen",
+            "analysis_primary_model": "qwen-not-a-real-model",
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_reference_video_queue_rejects_non_facebook_urls(client):
     page = client.post("/api/v1/pages", json={"name": "Curious Science"}).json()
     response = client.post(
