@@ -5,11 +5,12 @@ from app.api.routes.pages import router as pages_router
 from app.api.routes.strategies import router as strategies_router
 from app.api.routes.trends import router as trends_router
 from app.api.routes.scripts import router as scripts_router
+from app.api.routes.references import router as references_router
 from app.core.settings import settings
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.4.0",
+    version="0.7.0",
     description="AI-assisted content intelligence and Reel production API.",
 )
 
@@ -25,6 +26,7 @@ app.include_router(pages_router, prefix="/api/v1")
 app.include_router(strategies_router, prefix="/api/v1")
 app.include_router(trends_router, prefix="/api/v1")
 app.include_router(scripts_router, prefix="/api/v1")
+app.include_router(references_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["system"])
