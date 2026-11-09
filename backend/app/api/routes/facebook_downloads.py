@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 import shutil
 
 from fastapi import APIRouter, HTTPException
@@ -24,7 +25,6 @@ def download_facebook_video(payload: FacebookDownloadRequest, _user: CurrentUser
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     safe_title = re.sub(r"[^A-Za-z0-9._ -]+", "", title).strip(" .")[:80] or "facebook-video"
-    filename = f"{safe_title}.mp4"
     return FileResponse(
         path=file_path,
         media_type="video/mp4" if Path(file_path).suffix.lower() == ".mp4" else "video/webm",
