@@ -1,6 +1,6 @@
 "use client";
 
-import AuthActions from "@/components/AuthActions";
+import AppShell from "@/components/AppShell";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useState } from "react";
 
@@ -111,20 +111,16 @@ export default function ScriptsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#080d18] text-slate-100">
+    <AppShell active="scripts">
+    <main className="min-h-screen bg-transparent text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">AI REEL FACTORY · M6</p>
+            <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">CONTENT WORKFLOW</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight">Script studio</h1>
             <p className="mt-2 text-sm text-slate-400">Review generated variations, inspect their evaluations, and approve the exact version you want to produce.</p>
           </div>
-          <nav className="flex flex-wrap items-center gap-2">
-            <AuthActions />
-            <a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Pages</a>
-            <a href="/trends" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Trends</a>
-            <a href="/strategies" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Strategies</a>
-          </nav>
+          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">HUMAN REVIEW REQUIRED</span>
         </header>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
@@ -140,7 +136,7 @@ export default function ScriptsPage() {
         </section>
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 p-10 text-center text-sm text-slate-400">Loading scripts...</div>
+          <div className="grid gap-4 lg:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="skeleton-card space-y-4"><div className="skeleton-line w-1/3" /><div className="skeleton-line h-5 w-3/4" /><div className="skeleton-line h-3 w-full" /><div className="skeleton-line h-3 w-5/6" /><div className="skeleton-line h-3 w-full" /><div className="skeleton-line h-24 w-full rounded-xl" /></div>)}</div>
         ) : scripts.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/15 p-12 text-center">
             <h2 className="text-lg font-semibold">No generated scripts yet</h2>
@@ -207,5 +203,6 @@ export default function ScriptsPage() {
         <footer className="mt-14 border-t border-white/10 pt-5 text-xs text-slate-600">AI Reel Factory · Script approval applies to the exact version reviewed.</footer>
       </div>
     </main>
+    </AppShell>
   );
 }

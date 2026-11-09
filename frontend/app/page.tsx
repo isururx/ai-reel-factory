@@ -1,7 +1,7 @@
 "use client";
 
 import { authenticatedFetch } from "@/lib/supabase";
-import AuthActions from "@/components/AuthActions";
+import AppShell, { LoadingSkeleton } from "@/components/AppShell";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
@@ -169,7 +169,8 @@ export default function Home() {
   const activeCount = pages.filter((page) => page.is_active).length;
 
   return (
-    <main className="min-h-screen bg-[#080d18] text-slate-100">
+    <AppShell active="overview">
+    <main className="min-h-screen bg-transparent text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
         <header className="mb-10 flex flex-wrap items-center justify-between gap-5">
           <div>
@@ -177,13 +178,14 @@ export default function Home() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Page workspace</h1>
             <p className="mt-2 text-sm text-slate-400">Manage your content brands from one place.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2"><AuthActions /><a href="/strategies" className="rounded-full border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5">Strategies</a><a href="/trends" className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs text-cyan-200 transition hover:bg-cyan-400/20">Trend discovery ↗</a><div className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-4 py-2 text-xs text-cyan-200">M2 · Multi-Page management</div></div>
+          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">CONTENT OPERATIONS</span>
         </header>
 
-        <section className="mb-8 grid gap-3 sm:grid-cols-3">
+        <section className="mb-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat label="Total Pages" value={pages.length} />
           <Stat label="Active Pages" value={activeCount} />
           <Stat label="Paused Pages" value={pages.length - activeCount} />
+          <Stat label="Meta linked" value={pages.filter((page) => Boolean(page.external_page_id)).length} />
         </section>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
@@ -207,7 +209,7 @@ export default function Home() {
             <div><h2 className="text-xl font-semibold">Your Pages</h2><p className="mt-1 text-sm text-slate-500">Each Page has its own profile and content strategy.</p></div>
             <button onClick={() => { setLoading(true); void loadPages(); }} className="text-xs text-cyan-300 hover:text-cyan-200">Refresh ↻</button>
           </div>
-          {loading ? <div className="rounded-2xl border border-white/10 p-8 text-center text-sm text-slate-400">Loading Pages...</div> :
+          {loading ? <><div className="grid gap-3 md:grid-cols-2"><div className="skeleton-card"><div className="skeleton-line w-1/3" /><div className="skeleton-line mt-5 h-8 w-1/2" /></div><div className="skeleton-card"><div className="skeleton-line w-1/3" /><div className="skeleton-line mt-5 h-8 w-1/2" /></div></div><div className="mt-4"><LoadingSkeleton rows={3} /></div></> :
             pages.length === 0 ? <div className="rounded-2xl border border-dashed border-white/15 p-10 text-center"><p className="font-medium">No Pages yet</p><p className="mt-2 text-sm text-slate-500">Create your first content brand above.</p></div> :
             <div className="grid gap-4 lg:grid-cols-2">
               {pages.map((page) => (
@@ -255,6 +257,7 @@ export default function Home() {
         <footer className="mt-14 border-t border-white/10 pt-5 text-xs text-slate-600">AI Reel Factory · Page workspaces are configuration records; Meta OAuth connection is a later step.</footer>
       </div>
     </main>
+    </AppShell>
   );
 }
 

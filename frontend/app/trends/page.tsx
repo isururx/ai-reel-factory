@@ -1,6 +1,6 @@
 "use client";
 
-import AuthActions from "@/components/AuthActions";
+import AppShell, { GenerationOverlay, LoadingSkeleton } from "@/components/AppShell";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
@@ -63,6 +63,8 @@ export default function TrendsPage() {
   const [loading, setLoading] = useState(true);
   const [collecting, setCollecting] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -108,9 +110,10 @@ export default function TrendsPage() {
       setItems([]);
       return;
     }
-    void loadRecommendations(pageId, filter).catch((e) =>
-      setError(e instanceof Error ? e.message : "Could not load recommendations.")
-    );
+    setRecommendationsLoading(true);
+    void loadRecommendations(pageId, filter)
+      .catch((e) => setError(e instanceof Error ? e.message : "Could not load recommendations."))
+      .finally(() => setRecommendationsLoading(false));
   }, [pageId, filter, loadRecommendations]);
 
   async function collect(event: FormEvent<HTMLFormElement>) {
@@ -140,12 +143,12 @@ export default function TrendsPage() {
   }
 
   async function generateScripts(item: Recommendation) {
-    setBusyId(item.id); setError(""); setNotice("");
+    setBusyId(item.id); setGenerating(true); setError(""); setNotice("");
     try {
       await api(`/pages/${item.page_id}/trends/${item.id}/generate-scripts`, { method: "POST" });
       window.location.assign("/scripts");
     } catch (e) { setError(e instanceof Error ? e.message : "Could not generate scripts."); }
-    finally { setBusyId(null); }
+    finally { setBusyId(null); setGenerating(false); }
   }
 
   async function updateStatus(item: Recommendation, status: Filter) {
@@ -167,20 +170,17 @@ export default function TrendsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#080d18] text-slate-100">
+    <AppShell active="trends">
+    {generating && <GenerationOverlay /> }
+    <main className="min-h-screen bg-transparent text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
         <header className="mb-9 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">AI REEL FACTORY · M5</p>
+            <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">CONTENT INTELLIGENCE</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Trend discovery</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">Collect stories from RSS feeds and discover which ideas fit each content brand.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <AuthActions />
-            <a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Pages</a>
-            <a href="/strategies" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">Strategies</a>
-            <a href="/scripts" className="rounded-xl border border-cyan-300/30 px-4 py-2.5 text-sm text-cyan-200 hover:bg-cyan-300/10">Script studio</a>
-          </div>
+          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">LIVE FEED INTELLIGENCE</span>
         </header>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
@@ -217,7 +217,7 @@ export default function TrendsPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0 flex-1">
               <label htmlFor="trend-page" className="mb-2 block text-xs font-medium text-slate-400">Recommendations for Page</label>
-              {loading ? <p className="text-sm text-slate-400">Loading Pages...</p> : pages.length === 0 ? <p className="text-sm text-amber-200">Create a Page workspace before collecting recommendations.</p> :
+              {loading ? <LoadingSkeleton rows={2} /> : pages.length === 0 ? <p className="text-sm text-amber-200">Create a Page workspace before collecting recommendations.</p> :
                 <select id="trend-page" value={pageId} onChange={(e) => setPageId(Number(e.target.value))} className="field max-w-lg">
                   {pages.map((page) => <option key={page.id} value={page.id}>{page.name}{page.is_active ? "" : " · Paused"}</option>)}
                 </select>}
@@ -237,6 +237,7 @@ export default function TrendsPage() {
             <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-400">{items.length} shown</span>
           </div>
           {pageId === "" ? <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500">Create a Page workspace to get started.</div> :
+            recommendationsLoading ? <div className="grid gap-4 xl:grid-cols-2"><div className="skeleton-card space-y-4"><div className="skeleton-line w-1/3"/><div className="skeleton-line h-5 w-4/5"/><div className="skeleton-line h-3 w-full"/><div className="skeleton-line h-3 w-5/6"/><div className="skeleton-line h-20 w-full rounded-xl"/></div><div className="skeleton-card space-y-4"><div className="skeleton-line w-1/3"/><div className="skeleton-line h-5 w-4/5"/><div className="skeleton-line h-3 w-full"/><div className="skeleton-line h-3 w-5/6"/><div className="skeleton-line h-20 w-full rounded-xl"/></div></div> :
             items.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center"><p className="font-medium">No {filter} ideas yet</p><p className="mt-2 text-sm text-slate-500">Collect a few feeds above. Ideas will appear here when they match this Page's profile.</p></div> :
             <div className="grid gap-4 xl:grid-cols-2">
               {items.map((item) => (
@@ -268,5 +269,6 @@ export default function TrendsPage() {
         <footer className="mt-14 border-t border-white/10 pt-5 text-xs text-slate-600">AI Reel Factory · Trend scores are heuristic recommendations. Human review remains required.</footer>
       </div>
     </main>
+    </AppShell>
   );
 }

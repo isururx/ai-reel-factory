@@ -1,7 +1,7 @@
 "use client";
 
 import { authenticatedFetch } from "@/lib/supabase";
-import AuthActions from "@/components/AuthActions";
+import AppShell, { LoadingSkeleton } from "@/components/AppShell";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
@@ -173,7 +173,8 @@ export default function StrategiesPage() {
   const selected = strategies.find((item) => item.id === selectedId) ?? null;
 
   return (
-    <main className="min-h-screen bg-[#080d18] text-slate-100">
+    <AppShell active="strategies">
+    <main className="min-h-screen bg-transparent text-slate-100">
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -181,7 +182,7 @@ export default function StrategiesPage() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Content strategies</h1>
             <p className="mt-2 text-sm text-slate-400">Build a distinct, versioned content playbook for every Page.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2"><AuthActions /><a href="/trends" className="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm text-cyan-200 hover:bg-cyan-400/10">Trend discovery</a><a href="/" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">← Back to Pages</a></div>
+          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200">PAGE PLAYBOOKS</span>
         </header>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
@@ -189,7 +190,7 @@ export default function StrategiesPage() {
 
         <section className="mb-6 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
           <label className="mb-2 block text-xs font-medium text-slate-400" htmlFor="page-select">Choose a Page workspace</label>
-          {loading ? <p className="text-sm text-slate-400">Loading Pages...</p> : pages.length === 0 ? <p className="text-sm text-slate-400">Create a Page workspace first.</p> :
+          {loading ? <LoadingSkeleton rows={2} /> : pages.length === 0 ? <p className="text-sm text-slate-400">Create a Page workspace first.</p> :
             <select id="page-select" value={pageId} onChange={(e) => { setPageId(Number(e.target.value)); setSelectedId(null); setVersions([]); }} className="field max-w-md">
               {pages.map((page) => <option key={page.id} value={page.id}>{page.name}{page.is_active ? "" : " · Paused"}</option>)}
             </select>}
@@ -251,5 +252,6 @@ export default function StrategiesPage() {
         <footer className="mt-12 border-t border-white/10 pt-5 text-xs text-slate-600">AI Reel Factory · Each Page owns its own strategy and immutable configuration history.</footer>
       </div>
     </main>
+    </AppShell>
   );
 }
