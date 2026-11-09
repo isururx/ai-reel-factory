@@ -65,7 +65,7 @@ def analyze_video_file(file_path: str | Path, context: dict) -> dict:
             time.sleep(3)
             uploaded = client.files.get(name=uploaded.name)
 
-        prompt = ANALYSIS_PROMPT.format(context=json.dumps(context, ensure_ascii=False, default=str))
+        prompt = ANALYSIS_PROMPT.replace("{context}", json.dumps(context, ensure_ascii=False, default=str))
         response = client.models.generate_content(
             model=settings.llm_model,
             contents=[uploaded, prompt],
