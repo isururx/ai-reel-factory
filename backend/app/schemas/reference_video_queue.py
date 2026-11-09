@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class ReferenceVideoQueueCreate(BaseModel):
@@ -13,6 +13,19 @@ class ReferenceVideoQueueCreate(BaseModel):
     engagement_notes: str = Field(default="", max_length=10000)
     analysis_primary_provider: str | None = Field(default=None, pattern="^(gemini|qwen)$")
     analysis_primary_model: str | None = Field(default=None, max_length=160)
+
+    @model_validator(mode="after")
+    def validate_primary_model(self):
+        if bool(self.analysis_primary_provider) != bool(self.analysis_primary_model):
+            raise ValueError("Choose both analysis_primary_provider and analysis_primary_model.")
+        allowed = {
+            ("gemini", "gemini-3.5-flash-lite"),
+            ("qwen", "qwen3.8-flash"),
+            ("gemini", "gemini-2.5-flash"),
+        }
+        if self.analysis_primary_provider and (self.analysis_primary_provider, self.analysis_primary_model) not in allowed:
+            raise ValueError("Unsupported primary analysis model selection.")
+        return self
 
 
 class ReferenceVideoQueueJobRead(BaseModel):
