@@ -71,7 +71,7 @@ def test_reference_video_queue_rejects_unsupported_manual_model(client, monkeypa
         json={
             "source_url": "https://www.facebook.com/reel/123456",
             "analysis_primary_provider": "nemotron",
-            "analysis_primary_model": "qwen-not-a-real-model",
+            "analysis_primary_model": "unsupported-model",
         },
     )
     assert response.status_code == 422
