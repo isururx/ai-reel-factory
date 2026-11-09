@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.creative_intelligence import CreativeElement, CreativePattern, PatternEvidence
@@ -199,23 +199,16 @@ def persist_creative_intelligence(
             pattern.occurrence_count += 1
             matched_patterns.add(pattern.id)
             pattern.last_observed_at = datetime.now(timezone.utc)
-            if pattern.occurrence_count >= 3:
-                pattern.status = "active"
-            if element.confidence_score is not None:
+                if element.confidence_score is not None:
                 prior = pattern.confidence_score
                 pattern.confidence_score = element.confidence_score if prior is None else round((prior + element.confidence_score) / 2, 3)
 
     for pattern_id in matched_patterns:
         pattern = db.get(CreativePattern, pattern_id)
         if pattern is not None:
-            video_count = db.scalar(select(ReferenceVideo.id).join(
-                PatternEvidence, PatternEvidence.reference_video_id == ReferenceVideo.id
-            ).where(PatternEvidence.pattern_id == pattern_id).distinct())
-            # Count distinct supporting videos with a portable subquery.
-            from sqlalchemy import func
             count = db.scalar(select(func.count(func.distinct(PatternEvidence.reference_video_id))).where(
-                PatternEvidence.pattern_id == pattern_id
-            )) or 0
+            PatternEvidence.pattern_id == pattern_id
+        )) or 0
             pattern.supporting_video_count = int(count)
             if count >= 3:
                 pattern.status = "active"
