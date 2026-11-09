@@ -189,7 +189,7 @@ def analyze_video_with_fallback(
             elif provider == "qwen":
                 if video_url is None and object_key:
                     video_url = create_download_url(object_key, expires_in=1800)
-                qwen_prompt = prompt + "\\n\\nPROVIDER INPUT LIMITATION: This Qwen video adapter supplies visual video frames only, not the original audio track. Do not infer spoken narration, music, sound effects, pauses, or audio emphasis. Mark audio-related fields as unavailable/not provided unless directly supported by visible evidence. Do not fabricate a transcript.\\n"
+                qwen_prompt = prompt + "\n\nPROVIDER INPUT LIMITATION: This Qwen video adapter supplies visual video frames only, not the original audio track. Do not infer spoken narration, music, sound effects, pauses, or audio emphasis. Mark audio-related fields as unavailable/not provided unless directly supported by visible evidence. Do not fabricate a transcript.\n"
                 result, input_tokens, output_tokens = _qwen_analyze(video_url or "", qwen_prompt, model_id)
             else:
                 raise RuntimeError(f"Unsupported analysis provider: {provider}")
