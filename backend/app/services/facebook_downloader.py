@@ -24,7 +24,7 @@ def validate_facebook_url(url: str) -> None:
         raise FacebookDownloadError("URLs containing credentials are not supported.")
 
 
-def download_public_video(url: str) -> tuple[str, str, str]:
+def download_public_video(url: str) -> tuple[str, str, TemporaryDirectory]:
     """Download an accessible public Facebook video into a temporary directory.
 
     No cookies, login sessions, browser profiles, or access-control workarounds are used.
@@ -65,7 +65,7 @@ def download_public_video(url: str) -> tuple[str, str, str]:
             if output_dir.resolve() not in video_path.resolve().parents:
                 raise FacebookDownloadError("Unexpected download location.")
             title = str(info.get("title") or "facebook-video")[:160]
-            return str(video_path), title, temp_dir.name
+            return str(video_path), title, temp_dir
     except FacebookDownloadError:
         temp_dir.cleanup()
         raise
