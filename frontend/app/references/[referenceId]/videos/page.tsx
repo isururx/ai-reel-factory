@@ -60,7 +60,7 @@ export default function ReferenceVideosPage() {
     if (reactions !== "") form.set("reactions_count", reactions);
     if (shares !== "") form.set("shares_count", shares);
     if (commentsCount !== "") form.set("comments_count", commentsCount);
-    form.set("manual_comments_json", JSON.stringify(commentsText.split("\\n").map(x => x.trim()).filter(Boolean)));
+    form.set("manual_comments_json", JSON.stringify(commentsText.split("\n").map(x => x.trim()).filter(Boolean)));
     form.set("engagement_notes", notes);
     try {
       if (mode === "upload") {
