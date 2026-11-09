@@ -31,18 +31,18 @@ def _reference(page_id: int, reference_id: int, owner_id: str, db: Session) -> R
     return reference
 
 
-def _store_video(db: Session, user: CurrentUser, reference: ReferencePage, fileobj, filename: str,
+def _store_video(db: Session, user: CurrentUser, reference_id: int, fileobj, filename: str,
                  content_type: str, size: int, title: str, source_url: str | None,
                  manual_comments: list[str], views_count: int | None, reactions_count: int | None,
                  shares_count: int | None, comments_count: int | None, engagement_notes: str) -> ReferenceVideo:
     suffix = Path(filename).suffix.lower()[:12] or mimetypes.guess_extension(content_type) or ".mp4"
-    object_key = f"reference-videos/{user.id}/{reference.id}/{uuid4().hex}{suffix}"
+    object_key = f"reference-videos/{user.id}/{reference_id}/{uuid4().hex}{suffix}"
     try:
         upload_fileobj(fileobj, object_key, content_type)
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Could not store the video in Cloudflare R2. Check backend R2 configuration.") from exc
     video = ReferenceVideo(
-        owner_id=user.id, reference_page_id=reference.id, title=title[:200] or "Reference video",
+        owner_id=user.id, reference_page_id=reference_id, title=title[:200] or "Reference video",
         source_url=source_url, object_key=object_key, original_filename=Path(filename).name[:255],
         content_type=content_type, file_size=size, manual_comments=manual_comments,
         views_count=views_count, reactions_count=reactions_count, shares_count=shares_count,
@@ -79,6 +79,9 @@ async def upload_reference_video(
     db: Session = Depends(get_db),
 ):
     reference = _reference(page_id, reference_id, user.id, db)
+    validated_reference_id = reference.id
+    # Do not hold a Supabase connection while a potentially large file is uploaded to R2.
+    db.close()
     content_type = (file.content_type or "").lower()
     if content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=415, detail="Upload an MP4, WebM, MOV or MKV video.")
@@ -93,7 +96,7 @@ async def upload_reference_video(
     file.file.seek(0)
     if size <= 0 or size > MAX_VIDEO_BYTES:
         raise HTTPException(status_code=413, detail="Video must be between 1 byte and 300 MB.")
-    return _store_video(db, user, reference, file.file, file.filename or "reference-video.mp4",
+    return _store_video(db, user, validated_reference_id, file.file, file.filename or "reference-video.mp4",
                         content_type, size, title, source_url, manual_comments[:200],
                         views_count, reactions_count, shares_count, comments_count, engagement_notes)
 
@@ -108,6 +111,9 @@ def import_public_facebook_video(
     db: Session = Depends(get_db),
 ):
     reference = _reference(page_id, reference_id, user.id, db)
+    validated_reference_id = reference.id
+    # Release the DB connection before yt-dlp and the subsequent R2 upload.
+    db.close()
     try:
         comments = json.loads(manual_comments_json)
         if not isinstance(comments, list) or not all(isinstance(item, str) for item in comments):
@@ -126,7 +132,7 @@ def import_public_facebook_video(
         if content_type not in ALLOWED_TYPES:
             content_type = "video/mp4"
         with path.open("rb") as stream:
-            return _store_video(db, user, reference, stream, path.name, content_type, size,
+            return _store_video(db, user, validated_reference_id, stream, path.name, content_type, size,
                                 title if title != "Reference video" else detected_title, url,
                                 comments[:200], views_count, reactions_count, shares_count,
                                 comments_count, engagement_notes)
