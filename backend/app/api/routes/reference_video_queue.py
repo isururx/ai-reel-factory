@@ -108,6 +108,9 @@ def retry_failed_reference_video_job(
         if video is not None:
             video.analysis_status = "pending"
             video.analysis_result = {}
+            video.analysis_provider = None
+            video.analysis_model = None
+            video.analysis_total_duration_ms = None
             video.analyzed_at = None
     db.commit()
     db.refresh(job)
