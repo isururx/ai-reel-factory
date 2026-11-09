@@ -69,7 +69,7 @@ def test_reference_video_queue_is_page_owner_scoped(client, monkeypatch):
     assert response.json()["jobs"] == []
 
 
-def test_login_restricted_job_can_resume_with_manual_upload(client, monkeypatch):
+def test_login_restricted_job_can_resume_with_manual_upload(client, db_session, monkeypatch):
     from app.api.routes import reference_video_queue
 
     monkeypatch.setattr(reference_video_queue.drain_next_reference_video_job, "delay", lambda: None)
@@ -89,14 +89,11 @@ def test_login_restricted_job_can_resume_with_manual_upload(client, monkeypatch)
     job_id = queued.json()["id"]
 
     # Simulate the worker pausing a Facebook URL that cannot be accessed without login.
-    from app.database.session import SessionLocal
     from app.models.reference_video_job import ReferenceVideoJob
-    db = SessionLocal()
-    job = db.get(ReferenceVideoJob, job_id)
+    job = db_session.get(ReferenceVideoJob, job_id)
     job.status = "needs_upload"
     job.error_message = "Facebook requires login."
-    db.commit()
-    db.close()
+    db_session.commit()
 
     uploaded = client.post(
         f"/api/v1/pages/{page['id']}/reference-videos/queue/{job_id}/upload",
