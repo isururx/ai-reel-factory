@@ -38,7 +38,6 @@ export default function ReferenceVideosPage() {
   const [shares, setShares] = useState("");
   const [commentsCount, setCommentsCount] = useState("");
   const [commentsText, setCommentsText] = useState("");
-  const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -62,7 +61,6 @@ export default function ReferenceVideosPage() {
     if (shares !== "") form.set("shares_count", shares);
     if (commentsCount !== "") form.set("comments_count", commentsCount);
     form.set("manual_comments_json", JSON.stringify(commentsText.split("\n").map(x => x.trim()).filter(Boolean)));
-    form.set("engagement_notes", notes);
     try {
       if (mode === "upload") {
         if (!file) throw new Error("Choose a video file first.");
@@ -73,9 +71,9 @@ export default function ReferenceVideosPage() {
         form.set("url", url.trim());
         await request<Video>(`${base}/import-facebook`, { method: "POST", body: form });
       }
-      setFile(null); setUrl(""); setTitle(""); setViews(""); setReactions(""); setShares(""); setCommentsCount(""); setCommentsText(""); setNotes("");
+      setFile(null); setUrl(""); setTitle(""); setViews(""); setReactions(""); setShares(""); setCommentsCount(""); setCommentsText("");
       await load();
-      setNotice("Video saved to this reference workspace. Engagement and comments were stored as manually supplied context.");
+      setNotice("Video saved to this reference workspace.");
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save the video."); }
     finally { setBusy(false); }
   }
@@ -126,7 +124,6 @@ export default function ReferenceVideosPage() {
               </div>
             </section>
             <label className="block text-sm text-slate-300">Manually entered audience comments <span className="text-xs text-slate-500">(one comment per line)</span><textarea value={commentsText} onChange={e => setCommentsText(e.target.value)} rows={5} placeholder="This is so interesting!&#10;Can you explain how this works?" className="field mt-2" /></label>
-            <label className="block text-sm text-slate-300">Engagement notes / source of figures<textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="e.g. figures observed on 9 Nov 2026; approximate public counts" className="field mt-2" /></label>
             <button disabled={busy} className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50">{busy ? "Saving video…" : mode === "upload" ? "Upload to reference library" : "Download and save to reference library"}</button>
           </form>
 
