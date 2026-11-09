@@ -68,7 +68,7 @@ export default function AppShell({ active, children }: { active: AppSection; chi
         {links.map((link) => <a key={link.id} href={link.href} className={active === link.id ? "active" : ""}>{link.icon}<span>{link.label}</span></a>)}
       </div>
       <div className="app-content">{children}</div>
-      <footer className="app-global-footer"><span>AI REEL FACTORY</span><span>Content operations workspace · v0.7</span></footer>
+      <footer className="app-global-footer"><span>AI REEL FACTORY</span><span>Content operations workspace · v0.8</span></footer>
     </div>
   );
 }
