@@ -8,7 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.database.session import SessionLocal
 from app.models.page import Page
@@ -120,6 +120,10 @@ def drain_next_reference_video_job(self) -> dict:
 
             video.analysis_status = "processing"
             db.commit()
+            prior_attempt_count = db.scalar(select(func.count(ReferenceVideoAnalysisAttempt.id)).where(
+                ReferenceVideoAnalysisAttempt.reference_video_id == video.id,
+                ReferenceVideoAnalysisAttempt.owner_id == job.owner_id,
+            )) or 0
             try:
                 execution = analyze_video_with_fallback(
                     local_path, _context(job), object_key=video.object_key,
@@ -129,7 +133,7 @@ def drain_next_reference_video_job(self) -> dict:
                 for index, attempt in enumerate(getattr(analysis_exc, "attempts", []), start=1):
                     db.add(ReferenceVideoAnalysisAttempt(
                         owner_id=job.owner_id, page_id=job.page_id, reference_video_id=video.id,
-                        job_id=job.id, attempt_number=index, provider=attempt.provider,
+                        job_id=job.id, attempt_number=prior_attempt_count + index, provider=attempt.provider,
                         model_id=attempt.model_id, status=attempt.status, error_code=attempt.error_code,
                         error_message=attempt.error_message, duration_ms=attempt.duration_ms,
                         input_tokens=attempt.input_tokens, output_tokens=attempt.output_tokens,
@@ -143,7 +147,7 @@ def drain_next_reference_video_job(self) -> dict:
             video.analysis_result = analysis
             video.analysis_provider = execution.provider
             video.analysis_model = execution.model_id
-            video.analysis_attempt_count = len(execution.attempts)
+            video.analysis_attempt_count = prior_attempt_count + len(execution.attempts)
             video.analysis_total_duration_ms = execution.total_duration_ms
             video.analyzed_at = datetime.now(timezone.utc)
             for index, attempt in enumerate(execution.attempts, start=1):
