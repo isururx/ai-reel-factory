@@ -68,6 +68,7 @@ def drain_next_reference_video_job(self) -> dict:
                 local_path = Path(temp_dir) / video.original_filename
                 download_file(video.object_key, str(local_path))
             else:
+                download_temp_dir = None
                 try:
                     file_path, detected_title, download_temp_dir = download_public_video(job.source_url)
                 except FacebookDownloadError as exc:
@@ -109,7 +110,8 @@ def drain_next_reference_video_job(self) -> dict:
                     db.commit()
                     local_path = path
                 finally:
-                    download_temp_dir.cleanup()
+                    if download_temp_dir is not None:
+                        download_temp_dir.cleanup()
 
             video.analysis_status = "processing"
             db.commit()
