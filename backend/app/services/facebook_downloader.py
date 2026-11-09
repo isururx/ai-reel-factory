@@ -1,7 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
-import shutil
 
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
@@ -56,7 +55,7 @@ def download_public_video(url: str) -> tuple[str, str, str]:
             info = ydl.extract_info(url, download=True)
             if not info:
                 raise FacebookDownloadError("Facebook did not provide downloadable video data.")
-            candidates = [Path(p) for p in (info.get("requested_downloads") or []) if p.get("filepath")]
+            candidates = [Path(item["filepath"]) for item in (info.get("requested_downloads") or []) if item.get("filepath")]
             candidates = [p for p in candidates if p.exists()]
             if not candidates:
                 candidates = [p for p in output_dir.iterdir() if p.is_file()]
@@ -66,7 +65,6 @@ def download_public_video(url: str) -> tuple[str, str, str]:
             if output_dir.resolve() not in video_path.resolve().parents:
                 raise FacebookDownloadError("Unexpected download location.")
             title = str(info.get("title") or "facebook-video")[:160]
-            video_id = str(info.get("id") or video_path.stem)[:100]
             return str(video_path), title, temp_dir.name
     except FacebookDownloadError:
         temp_dir.cleanup()
