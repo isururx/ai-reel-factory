@@ -8,11 +8,13 @@ class ReferenceVideo(Base):
     __tablename__ = "reference_videos"
     __table_args__ = (
         Index("ix_reference_videos_owner_reference", "owner_id", "reference_page_id"),
+        Index("ix_reference_videos_owner_page", "owner_id", "page_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     owner_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    reference_page_id: Mapped[int] = mapped_column(ForeignKey("reference_pages.id", ondelete="CASCADE"), nullable=False, index=True)
+    page_id: Mapped[int | None] = mapped_column(ForeignKey("pages.id", ondelete="CASCADE"), nullable=True, index=True)
+    reference_page_id: Mapped[int | None] = mapped_column(ForeignKey("reference_pages.id", ondelete="CASCADE"), nullable=True, index=True)
     reference_post_id: Mapped[int | None] = mapped_column(ForeignKey("reference_posts.id", ondelete="SET NULL"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False, default="Reference video")
     source_url: Mapped[str | None] = mapped_column(String(2048))
@@ -28,5 +30,6 @@ class ReferenceVideo(Base):
     engagement_notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     analysis_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
     analysis_result: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
