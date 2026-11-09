@@ -229,10 +229,16 @@ def persist_creative_intelligence(
         pattern = db.get(CreativePattern, pattern_id)
         if pattern is None:
             continue
-        count = db.scalar(select(func.count(func.distinct(
-            PatternEvidence.reference_video_id
-        ))).where(PatternEvidence.pattern_id == pattern_id)) or 0
-        pattern.supporting_video_count = int(count)
+        # Materialize the distinct source IDs explicitly. This is portable across
+        # PostgreSQL and SQLite test databases and avoids dialect-specific aggregate
+        # behavior affecting the maturity threshold.
+        supporting_video_ids = set(db.scalars(
+            select(PatternEvidence.reference_video_id).where(
+                PatternEvidence.pattern_id == pattern_id
+            ).distinct()
+        ).all())
+        count = len(supporting_video_ids)
+        pattern.supporting_video_count = count
         # Repetition across distinct videos is a maturity label, not a performance claim.
         pattern.status = "active" if count >= 3 else "emerging"
 
