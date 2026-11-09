@@ -147,13 +147,6 @@ def drain_next_reference_video_job(self) -> dict:
                 raise
 
             analysis = execution.result
-            video.analysis_status = "completed"
-            video.analysis_result = analysis
-            video.analysis_provider = execution.provider
-            video.analysis_model = execution.model_id
-            video.analysis_attempt_count = prior_attempt_count + len(execution.attempts)
-            video.analysis_total_duration_ms = prior_duration_ms + execution.total_duration_ms
-            video.analyzed_at = datetime.now(timezone.utc)
             for index, attempt in enumerate(execution.attempts, start=1):
                 db.add(ReferenceVideoAnalysisAttempt(
                     owner_id=job.owner_id, page_id=job.page_id, reference_video_id=video.id,
@@ -163,6 +156,17 @@ def drain_next_reference_video_job(self) -> dict:
                     input_tokens=attempt.input_tokens, output_tokens=attempt.output_tokens,
                     started_at=attempt.started_at, completed_at=attempt.completed_at,
                 ))
+            # Commit provider logs before downstream pattern extraction. If that
+            # stage fails, the model attempt history must still be retained.
+            db.flush()
+            db.commit()
+            video.analysis_status = "completed"
+            video.analysis_result = analysis
+            video.analysis_provider = execution.provider
+            video.analysis_model = execution.model_id
+            video.analysis_attempt_count = prior_attempt_count + len(execution.attempts)
+            video.analysis_total_duration_ms = prior_duration_ms + execution.total_duration_ms
+            video.analyzed_at = datetime.now(timezone.utc)
             intelligence_result = persist_creative_intelligence(
                 db, owner_id=job.owner_id, page_id=page.id, video=video, analysis=analysis
             )
