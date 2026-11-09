@@ -48,6 +48,8 @@ def enqueue_reference_video(page_id: int, payload: ReferenceVideoQueueCreate,
         comments_count=payload.comments_count,
         manual_comments=payload.manual_comments,
         engagement_notes=payload.engagement_notes,
+        analysis_primary_provider=payload.analysis_primary_provider,
+        analysis_primary_model=payload.analysis_primary_model,
         status="queued",
     )
     db.add(job)
