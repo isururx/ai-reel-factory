@@ -28,7 +28,6 @@ class ReferencePost(Base):
 class ReferencePostMetric(Base):
     __tablename__ = "reference_post_metrics"
     __table_args__ = (
-        UniqueConstraint("post_id", "captured_at", name="uq_reference_post_metric_snapshot"),
         Index("ix_reference_post_metrics_post_captured", "post_id", "captured_at"),
     )
 
