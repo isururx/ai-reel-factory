@@ -15,6 +15,7 @@ def upgrade() -> None:
         ["page_id"], ["id"], ondelete="CASCADE",
     )
     op.create_index("ix_reference_videos_page_id", "reference_videos", ["page_id"])
+    op.create_index("ix_reference_videos_owner_page", "reference_videos", ["owner_id", "page_id"])
     op.add_column("reference_videos", sa.Column("analyzed_at", sa.DateTime(timezone=True), nullable=True))
     op.alter_column("reference_videos", "reference_page_id", existing_type=sa.Integer(), nullable=True)
     op.execute("""
@@ -53,6 +54,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("reference_video_jobs")
+    op.drop_index("ix_reference_videos_owner_page", table_name="reference_videos")
     op.drop_index("ix_reference_videos_page_id", table_name="reference_videos")
     op.drop_column("reference_videos", "analyzed_at")
     op.drop_constraint("fk_reference_videos_page_id_pages", "reference_videos", type_="foreignkey")
