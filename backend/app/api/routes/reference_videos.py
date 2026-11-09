@@ -39,7 +39,7 @@ def _reference(page_id: int, reference_id: int, owner_id: str, db: Session) -> R
 def _store_video(db: Session, user: CurrentUser, reference_id: int, fileobj, filename: str,
                  content_type: str, size: int, title: str, source_url: str | None,
                  manual_comments: list[str], views_count: int | None, reactions_count: int | None,
-                 shares_count: int | None, comments_count: int | None, engagement_notes: str) -> ReferenceVideo:
+                 shares_count: int | None, comments_count: int | None) -> ReferenceVideo:
     suffix = Path(filename).suffix.lower()[:12] or mimetypes.guess_extension(content_type) or ".mp4"
     object_key = f"reference-videos/{user.id}/{reference_id}/{uuid4().hex}{suffix}"
     try:
@@ -51,7 +51,7 @@ def _store_video(db: Session, user: CurrentUser, reference_id: int, fileobj, fil
         source_url=source_url, object_key=object_key, original_filename=Path(filename).name[:255],
         content_type=content_type, file_size=size, manual_comments=manual_comments,
         views_count=views_count, reactions_count=reactions_count, shares_count=shares_count,
-        comments_count=comments_count, engagement_notes=engagement_notes,
+        comments_count=comments_count,
     )
     db.add(video)
     db.commit()
@@ -80,7 +80,6 @@ async def upload_reference_video(
     shares_count: int | None = Form(None),
     comments_count: int | None = Form(None),
     manual_comments_json: str = Form("[]"),
-    engagement_notes: str = Form(""),
     db: Session = Depends(get_db),
 ):
     reference = _reference(page_id, reference_id, user.id, db)
