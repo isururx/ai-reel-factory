@@ -14,10 +14,11 @@ from app.database.session import get_db
 from app.models.reference import ReferencePage
 from app.models.reference_video import ReferenceVideo
 from app.models.reference_insight import ReferenceCreativeInsight
+from app.models.reference_video_analysis_attempt import ReferenceVideoAnalysisAttempt
 from app.schemas.reference_videos import ReferenceVideoManualUpdate, ReferenceVideoRead
 from app.services.facebook_downloader import FacebookDownloadError, download_public_video
 from app.storage.r2 import create_download_url, download_file, upload_fileobj
-from app.services.reference_video_analysis import analyze_video_file
+from app.services.reference_video_analysis import analyze_video_with_fallback
 
 router = APIRouter(prefix="/pages/{page_id}/references/{reference_id}/videos", tags=["reference videos"])
 MAX_VIDEO_BYTES = 300 * 1024 * 1024
@@ -219,7 +220,8 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
         with tempfile.TemporaryDirectory(prefix="ai-reel-analysis-") as temp_dir:
             local_path = Path(temp_dir) / f"reference{suffix}"
             download_file(object_key, str(local_path))
-            analysis = analyze_video_file(local_path, context)
+            execution = analyze_video_with_fallback(local_path, context, object_key=object_key)
+            analysis = execution.result
 
         # Reuse the request session only after the long R2/Gemini work has finished.
         video = db.scalar(select(ReferenceVideo).where(
@@ -231,7 +233,20 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
             raise HTTPException(status_code=404, detail="Reference video was removed during analysis.")
         video.analysis_status = "completed"
         video.analysis_result = analysis
+        video.analysis_provider = execution.provider
+        video.analysis_model = execution.model_id
+        video.analysis_attempt_count = len(execution.attempts)
+        video.analysis_total_duration_ms = execution.total_duration_ms
         video.analyzed_at = datetime.now(timezone.utc)
+        for index, attempt in enumerate(execution.attempts, start=1):
+            db.add(ReferenceVideoAnalysisAttempt(
+                owner_id=user.id, page_id=page_id, reference_video_id=video.id,
+                attempt_number=index, provider=attempt.provider, model_id=attempt.model_id,
+                status=attempt.status, error_code=attempt.error_code, error_message=attempt.error_message,
+                duration_ms=attempt.duration_ms, input_tokens=attempt.input_tokens,
+                output_tokens=attempt.output_tokens, started_at=attempt.started_at,
+                completed_at=attempt.completed_at,
+            ))
         insight = ReferenceCreativeInsight(
             owner_id=user.id,
             page_id=page_id,
@@ -256,5 +271,17 @@ def analyze_reference_video(page_id: int, reference_id: int, video_id: int,
         if failed_video is not None:
             failed_video.analysis_status = "failed"
             failed_video.analysis_result = {"error": str(exc)[:500]}
+            attempts = getattr(exc, "attempts", [])
+            for index, attempt in enumerate(attempts, start=1):
+                db.add(ReferenceVideoAnalysisAttempt(
+                    owner_id=user.id, page_id=page_id, reference_video_id=failed_video.id,
+                    attempt_number=index, provider=attempt.provider, model_id=attempt.model_id,
+                    status=attempt.status, error_code=attempt.error_code, error_message=attempt.error_message,
+                    duration_ms=attempt.duration_ms, input_tokens=attempt.input_tokens,
+                    output_tokens=attempt.output_tokens, started_at=attempt.started_at,
+                    completed_at=attempt.completed_at,
+                ))
+            failed_video.analysis_attempt_count = len(attempts)
+            failed_video.analysis_total_duration_ms = sum(item.duration_ms for item in attempts)
             db.commit()
         raise HTTPException(status_code=502, detail=f"Video analysis failed: {str(exc)[:300]}") from exc
