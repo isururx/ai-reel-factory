@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-import shutil
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -29,5 +28,5 @@ def download_facebook_video(payload: FacebookDownloadRequest, _user: CurrentUser
         path=file_path,
         media_type="video/mp4" if Path(file_path).suffix.lower() == ".mp4" else "video/webm",
         filename=f"{safe_title}{Path(file_path).suffix}",
-        background=BackgroundTask(shutil.rmtree, temp_dir, ignore_errors=True),
+        background=BackgroundTask(temp_dir.cleanup),
     )
