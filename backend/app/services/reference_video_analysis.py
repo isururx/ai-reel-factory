@@ -176,7 +176,7 @@ def analyze_video_with_fallback(
     primary_provider: str | None = None, primary_model: str | None = None,
 ) -> AnalysisExecution:
     prompt = ANALYSIS_PROMPT.replace("{context}", json.dumps(context, ensure_ascii=False, default=str))
-    video_url = create_download_url(object_key, expires_in=1800) if object_key else None
+    video_url = None
     attempts: list[ProviderAttempt] = []
     total_started = time.monotonic()
 
@@ -187,6 +187,8 @@ def analyze_video_with_fallback(
             if provider == "gemini":
                 result, input_tokens, output_tokens = _gemini_analyze(file_path, prompt, model_id)
             elif provider == "qwen":
+                if video_url is None and object_key:
+                    video_url = create_download_url(object_key, expires_in=1800)
                 result, input_tokens, output_tokens = _qwen_analyze(video_url or "", prompt, model_id)
             else:
                 raise RuntimeError(f"Unsupported analysis provider: {provider}")
