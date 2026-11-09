@@ -59,7 +59,6 @@ export default function ReferencePostsPage() {
         <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
           <a href="/references" className="text-sm text-cyan-300 hover:text-cyan-200">← Back to references</a>
           <header className="mt-5 mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
             <div>
               <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">CONTENT INTELLIGENCE · R2</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Reference posts</h1>
