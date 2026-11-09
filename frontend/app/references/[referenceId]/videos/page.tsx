@@ -10,7 +10,7 @@ type Video = {
   content_type: string; file_size: number; views_count: number | null;
   reactions_count: number | null; shares_count: number | null; comments_count: number | null;
   manual_comments: string[]; engagement_notes: string; analysis_status: string;
-  created_at: string;
+  created_at: string; analysis_result: Record<string, any>;
 };
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
 
@@ -42,6 +42,7 @@ export default function ReferenceVideosPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
 
   const base = `/pages/${pageId}/references/${referenceId}/videos`;
   const load = useCallback(async () => {
@@ -77,6 +78,16 @@ export default function ReferenceVideosPage() {
       setNotice("Video saved to this reference workspace. Engagement and comments were stored as manually supplied context.");
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save the video."); }
     finally { setBusy(false); }
+  }
+
+  async function analyzeVideo(id: number) {
+    setAnalyzingId(id); setError(""); setNotice("");
+    try {
+      await request<Video>(`${base}/${id}/analyze`, { method: "POST" });
+      await load();
+      setNotice("AI analysis completed. Review the findings before using them as creative guidance.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Video analysis failed."); await load(); }
+    finally { setAnalyzingId(null); }
   }
 
   async function openVideo(id: number) {
@@ -121,7 +132,7 @@ export default function ReferenceVideosPage() {
 
           <section className="mt-9">
             <div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-semibold">Saved videos</h2><span className="text-xs text-slate-500">{videos.length} videos</span></div>
-            {videos.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500">No reference videos uploaded yet.</div> : <div className="grid gap-3 md:grid-cols-2">{videos.map(video => <article key={video.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{video.title}</h3><p className="mt-1 text-xs text-slate-500">{video.original_filename} · {(video.file_size / 1024 / 1024).toFixed(1)} MB</p></div><span className="rounded-lg border border-amber-300/20 px-2 py-1 text-xs text-amber-200">Analysis: {video.analysis_status}</span></div><div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400"><span>Views: {video.views_count ?? "—"}</span><span>Reactions: {video.reactions_count ?? "—"}</span><span>Shares: {video.shares_count ?? "—"}</span><span>Comments: {video.comments_count ?? "—"}</span></div><p className="mt-3 text-xs text-slate-500">{video.manual_comments.length} manually entered comments</p><button onClick={() => void openVideo(video.id)} className="mt-4 text-sm font-semibold text-cyan-300">Open stored video ↗</button></article>)}</div>}
+            {videos.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500">No reference videos uploaded yet.</div> : <div className="grid gap-3 md:grid-cols-2">{videos.map(video => <article key={video.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{video.title}</h3><p className="mt-1 text-xs text-slate-500">{video.original_filename} · {(video.file_size / 1024 / 1024).toFixed(1)} MB</p></div><span className="rounded-lg border border-amber-300/20 px-2 py-1 text-xs text-amber-200">Analysis: {video.analysis_status}</span></div><div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400"><span>Views: {video.views_count ?? "—"}</span><span>Reactions: {video.reactions_count ?? "—"}</span><span>Shares: {video.shares_count ?? "—"}</span><span>Comments: {video.comments_count ?? "—"}</span></div><p className="mt-3 text-xs text-slate-500">{video.manual_comments.length} manually entered comments</p><div className="mt-4 flex flex-wrap gap-4"><button disabled={analyzingId === video.id} onClick={() => void analyzeVideo(video.id)} className="text-sm font-semibold text-cyan-300 disabled:opacity-50">{analyzingId === video.id ? "Analyzing video…" : video.analysis_status === "completed" ? "Re-analyze video" : "Run AI analysis"}</button><button onClick={() => void openVideo(video.id)} className="text-sm font-semibold text-slate-300">Open stored video ↗</button></div>{video.analysis_status === "completed" && video.analysis_result && <div className="mt-4 space-y-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-cyan-300">AI creative analysis</p><p className="mt-1 text-sm text-slate-200">{video.analysis_result.summary}</p></div>{video.analysis_result.hook && <p className="text-xs text-slate-400"><strong className="text-slate-200">Hook:</strong> {video.analysis_result.hook.description} · {video.analysis_result.hook.strength}</p>}{Array.isArray(video.analysis_result.reusable_patterns) && <div><p className="text-xs font-semibold text-slate-200">Reusable creative patterns</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-400">{video.analysis_result.reusable_patterns.slice(0,3).map((item: any, index: number) => <li key={index}>{item.pattern} — {item.adaptation_idea}</li>)}</ul></div>}<p className="text-[11px] text-amber-200">Saved as Page-specific insights pending human review. These are AI interpretations, not verified performance claims.</p></div>}</article>)}</div>}
           </section>
         </div>
       </main>
