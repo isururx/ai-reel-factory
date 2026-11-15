@@ -25,6 +25,16 @@ type ScriptVersion = {
       strengths?: string;
     };
     source_url?: string;
+    creative_intelligence?: {
+      retrieval_method?: string;
+      patterns_available?: number;
+      patterns_used?: Array<{
+        id: number;
+        name: string;
+        category: string;
+        supporting_video_count: number;
+      }>;
+    };
   };
   created_at: string;
 };
@@ -185,6 +195,24 @@ export default function ScriptsPage() {
                             </div>
                             {evaluation.fact_check_notes && <p className="mt-3 text-xs leading-5 text-amber-200">Fact-check: {evaluation.fact_check_notes}</p>}
                             {evaluation.strengths && <p className="mt-2 text-xs leading-5 text-slate-400">{evaluation.strengths}</p>}
+                          </div>
+                        )}
+                        {version.script_data?.creative_intelligence && (
+                          <div className="mt-4 rounded-lg border border-cyan-400/15 bg-cyan-400/[0.04] p-3">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-200">Page creative intelligence</p>
+                            {version.script_data.creative_intelligence.patterns_used?.length ? (
+                              <div className="space-y-2">
+                                {version.script_data.creative_intelligence.patterns_used.map((pattern) => (
+                                  <div key={pattern.id} className="flex items-start justify-between gap-3 text-xs">
+                                    <span className="text-slate-200">{pattern.name} <span className="text-slate-500">· {pattern.category}</span></span>
+                                    <span className="shrink-0 text-slate-500">{pattern.supporting_video_count} videos</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs leading-5 text-slate-400">No mature patterns were available for this Page yet. This script used the Page profile, strategy and selected trend.</p>
+                            )}
+                            <p className="mt-2 text-[10px] text-slate-500">Repeated observations guide creativity; they are not proof of performance.</p>
                           </div>
                         )}
                         <div className="mt-auto flex flex-wrap gap-2 border-t border-white/10 pt-4 mt-4">
