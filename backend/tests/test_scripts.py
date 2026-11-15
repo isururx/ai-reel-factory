@@ -55,7 +55,7 @@ def test_generate_one_script_directly_from_brief(client):
     assert body["status"] == "review"
     context = generator.call_args.args[0]
     assert context["brief"] == brief
-    assert context["source_url"] == "https://example.com/source/"
+    assert context["source_url"] == "https://example.com/source"
 
 
 def test_generation_requires_page_profile(client):
