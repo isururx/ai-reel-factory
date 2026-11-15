@@ -73,12 +73,21 @@ def build_script_intelligence_context(
 
     prompt_patterns: list[dict[str, Any]] = []
     for pattern in selected:
-        evidence_rows = list(db.scalars(
+        recent_evidence = list(db.scalars(
             select(PatternEvidence)
             .where(PatternEvidence.pattern_id == pattern.id)
             .order_by(PatternEvidence.created_at.desc(), PatternEvidence.id.desc())
-            .limit(2)
+            .limit(30)
         ).all())
+        evidence_rows = []
+        seen_video_ids: set[int] = set()
+        for evidence in recent_evidence:
+            if evidence.reference_video_id in seen_video_ids:
+                continue
+            evidence_rows.append(evidence)
+            seen_video_ids.add(evidence.reference_video_id)
+            if len(evidence_rows) == 2:
+                break
         prompt_patterns.append({
             "pattern_id": pattern.id,
             "category": pattern.category,
