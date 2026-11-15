@@ -26,6 +26,7 @@ type ScriptVersion = {
     };
     source_url?: string;
     edited_by_human?: boolean;
+    batch_id?: number;
   };
   created_at: string;
 };
@@ -213,8 +214,9 @@ export default function ScriptsPage() {
 
   const evaluation = latest?.script_data?.evaluation;
   const refreshScripts = useCallback(() => {
-    if (pageId !== "") void loadScripts(pageId);
-  }, [pageId, loadScripts]);
+    if (pageId === "") return;
+    void api<ContentScript[]>(`/pages/${pageId}/scripts`).then(setScripts).catch((e) => setError(e instanceof Error ? e.message : "Could not refresh generated scripts."));
+  }, [pageId]);
 
   return (
     <AppShell active="scripts">
@@ -268,7 +270,7 @@ export default function ScriptsPage() {
                     {scripts.map((script) => {
                       const current = [...script.versions].sort((a, b) => b.version_number - a.version_number)[0];
                       return <button key={script.id} onClick={() => chooseScript(script)} className={`w-full rounded-xl border p-3 text-left transition ${script.id === selected.id ? "border-cyan-300/30 bg-cyan-300/[0.07]" : "border-white/[0.07] bg-white/[0.015] hover:bg-white/[0.04]"}`}>
-                        <div className="flex items-center justify-between gap-2"><span className="text-[10px] uppercase tracking-wider text-slate-500">Script #{script.id}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] capitalize ${statusStyle(script.status)}`}>{script.status}</span></div>
+                        <div className="flex items-center justify-between gap-2"><span className="text-[10px] uppercase tracking-wider text-slate-500">Script #{script.id}{current?.script_data?.batch_id ? ` · Batch #${current.script_data.batch_id}` : ""}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] capitalize ${statusStyle(script.status)}`}>{script.status}</span></div>
                         <p className="mt-2 line-clamp-2 text-sm font-medium leading-5 text-slate-200">{script.title}</p>
                         <p className="mt-2 text-[10px] text-slate-500">Version {current?.version_number ?? 0}</p>
                       </button>;
