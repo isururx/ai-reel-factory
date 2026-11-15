@@ -106,10 +106,10 @@ export default function ScriptsPage() {
   const loadScripts = useCallback(async (id: number, preferredId?: number) => {
     const result = await api<ContentScript[]>(`/pages/${id}/scripts`);
     setScripts(result);
-    const next = result.find((script) => script.id === (preferredId ?? selectedId)) ?? result[0] ?? null;
+    const next = result.find((script) => script.id === preferredId) ?? result[0] ?? null;
     setSelectedId(next?.id ?? null);
     setEditor(next ? editorFrom(next) : { ...emptyEditor });
-  }, [selectedId]);
+  }, []);
 
   useEffect(() => {
     let active = true;
