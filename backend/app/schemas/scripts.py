@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class ScriptGenerateRequest(BaseModel):
-    brief: str = Field(min_length=20, max_length=5000)
+    brief: str | None = Field(default=None, min_length=20, max_length=5000)
     source_url: HttpUrl | None = None
 
 
