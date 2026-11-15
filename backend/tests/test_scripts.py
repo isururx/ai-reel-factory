@@ -1,35 +1,99 @@
 from unittest.mock import patch
+
 from app.models.page import Page, PageProfile
-from app.models.trend import TrendItem, PageTrendRecommendation
 
-def _seed(client):
+
+def _seed(client, with_profile=True):
     from app.database.session import get_db
+
     db = next(client.app.dependency_overrides[get_db]())
-    page = Page(name="Science", owner_id="test-user-0001"); db.add(page); db.flush()
-    db.add(PageProfile(page_id=page.id, niche="Science", target_audience="General audience"))
-    trend = TrendItem(owner_id="test-user-0001", source_name="Test", source_url="https://example.com/story", title="A science discovery", summary="A source summary")
-    db.add(trend); db.flush(); rec = PageTrendRecommendation(page_id=page.id, trend_id=trend.id, status="selected")
-    db.add(rec); db.commit(); result=(page.id, rec.id); db.close(); return result
+    page = Page(name="Science", owner_id="test-user-0001")
+    db.add(page)
+    db.flush()
+    if with_profile:
+        db.add(PageProfile(page_id=page.id, niche="Science", target_audience="General audience"))
+    db.commit()
+    page_id = page.id
+    db.close()
+    return page_id
 
-def test_generate_three_script_variations(client):
-    page_id, rec_id = _seed(client)
-    variations=[{"title":f"Variation {i}","hook":f"Hook {i}","narration":f"Narration {i}","caption":"Caption","hashtags":["#science"],"script_data":{"evaluation":{"hook_score":8}}} for i in range(1,4)]
-    with patch("app.api.routes.scripts.generate_variations", return_value=variations):
-        response=client.post(f"/api/v1/pages/{page_id}/trends/{rec_id}/generate-scripts")
+
+def _generated_script():
+    return {
+        "title": "The surprising science discovery",
+        "hook": "What if the world around you is not quite what you think?",
+        "narration": "A complete narration about the discovery.",
+        "caption": "A short caption.",
+        "hashtags": ["#science"],
+        "script_data": {
+            "estimated_duration_seconds": 70,
+            "evaluation": {
+                "hook_score": 8,
+                "storytelling_score": 8,
+                "originality_score": 8,
+                "visual_suitability_score": 8,
+                "fact_check_notes": "Verify the original research.",
+                "strengths": "Clear and visual storytelling.",
+            },
+        },
+    }
+
+
+def test_generate_one_script_directly_from_brief(client):
+    page_id = _seed(client)
+    brief = "Explain an interesting science discovery for a general audience."
+    with patch("app.api.routes.scripts.generate_script", return_value=_generated_script()) as generator:
+        response = client.post(
+            f"/api/v1/pages/{page_id}/scripts/generate",
+            json={"brief": brief, "source_url": "https://example.com/source"},
+        )
+
     assert response.status_code == 201, response.text
-    assert len(response.json()["versions"]) == 3
+    body = response.json()
+    assert len(body["versions"]) == 1
+    assert body["versions"][0]["version_number"] == 1
+    assert body["status"] == "review"
+    context = generator.call_args.args[0]
+    assert context["brief"] == brief
+    assert context["source_url"] == "https://example.com/source/"
 
-def test_cannot_generate_for_unselected_trend(client):
-    page_id, rec_id = _seed(client)
-    from app.database.session import get_db
-    from app.models.trend import PageTrendRecommendation
-    db=next(client.app.dependency_overrides[get_db]()); db.get(PageTrendRecommendation,rec_id).status="saved"; db.commit(); db.close()
-    assert client.post(f"/api/v1/pages/{page_id}/trends/{rec_id}/generate-scripts").status_code == 404
 
-def test_edit_creates_new_version(client):
-    page_id, rec_id = _seed(client)
-    variations=[{"title":f"Variation {i}","hook":f"Hook {i}","narration":f"Narration {i}","caption":"","hashtags":[],"script_data":{}} for i in range(1,4)]
-    with patch("app.api.routes.scripts.generate_variations", return_value=variations):
-        script=client.post(f"/api/v1/pages/{page_id}/trends/{rec_id}/generate-scripts").json()
-    response=client.post(f"/api/v1/pages/{page_id}/scripts/{script["id"]}/versions",json={"title":"Edited","hook":"New hook","narration":"New narration","caption":"","hashtags":[]})
-    assert response.status_code == 201 and response.json()["version_number"] == 4
+def test_generation_requires_page_profile(client):
+    page_id = _seed(client, with_profile=False)
+    response = client.post(
+        f"/api/v1/pages/{page_id}/scripts/generate",
+        json={"brief": "Create an interesting science explainer for a broad audience."},
+    )
+    assert response.status_code == 400
+    assert "Page profile" in response.text
+
+
+def test_generation_rejects_short_brief(client):
+    page_id = _seed(client)
+    response = client.post(
+        f"/api/v1/pages/{page_id}/scripts/generate",
+        json={"brief": "Too short"},
+    )
+    assert response.status_code == 422
+
+
+def test_edit_creates_a_new_immutable_version(client):
+    page_id = _seed(client)
+    with patch("app.api.routes.scripts.generate_script", return_value=_generated_script()):
+        generated = client.post(
+            f"/api/v1/pages/{page_id}/scripts/generate",
+            json={"brief": "Explain a fascinating science discovery to a general audience."},
+        ).json()
+
+    response = client.post(
+        f"/api/v1/pages/{page_id}/scripts/{generated['id']}/versions",
+        json={
+            "title": "Human edited title",
+            "hook": "A better opening hook",
+            "narration": "Human-edited narration.",
+            "caption": "Edited caption.",
+            "hashtags": ["#science"],
+        },
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["version_number"] == 2

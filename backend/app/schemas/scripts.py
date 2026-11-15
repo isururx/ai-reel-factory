@@ -1,6 +1,13 @@
 from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+
+
+class ScriptGenerateRequest(BaseModel):
+    brief: str = Field(min_length=20, max_length=5000)
+    source_url: HttpUrl | None = None
+
 
 class ScriptVersionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -13,6 +20,7 @@ class ScriptVersionRead(BaseModel):
     script_data: dict
     created_at: datetime
 
+
 class ContentScriptRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -22,12 +30,14 @@ class ContentScriptRead(BaseModel):
     created_at: datetime
     versions: list[ScriptVersionRead]
 
+
 class ScriptVersionUpdate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     hook: str = Field(min_length=1, max_length=500)
     narration: str = Field(min_length=1)
     caption: str = ""
     hashtags: list[str] = Field(default_factory=list, max_length=20)
+
 
 class ScriptDecision(BaseModel):
     decision: Literal["approved", "rejected"]
