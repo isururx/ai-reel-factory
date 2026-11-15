@@ -103,7 +103,7 @@ The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localh
 ## M7 Intelligence-driven script generation
 - Script generation retrieves active creative patterns belonging to the authenticated owner and selected Page only.
 - Patterns are ranked using lightweight topic overlap, supporting-video count, occurrence count and extraction confidence; up to 12 are included.
-- Up to two recent evidence examples per selected pattern are passed as context, with source video IDs and timestamps.
+- Up to two recent evidence examples from distinct supporting videos per selected pattern are passed as context, with source video IDs and timestamps.
 - Gemini is instructed to adapt abstract techniques without copying reference dialogue or distinctive expression.
 - Every generated script version records the Page-specific pattern provenance in `script_data.creative_intelligence`; Script Studio displays the patterns used.
 - If no active patterns exist, generation continues using the Page profile, strategy and selected trend.
