@@ -83,7 +83,7 @@ The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localh
 - Generate a single finalized Reel script directly from `POST /api/v1/pages/{page_id}/scripts/generate` by supplying a creative brief and optional source URL.
 - The generation prompt uses the selected Page profile and active content strategy. The brief supplies the topic, angle and creative direction.
 - Open `/scripts` to generate, edit, save immutable versions, and approve or reject the exact saved version.
-- Narration targets 120–170 words for an approximately 60–90 second Reel. AI evaluation is preliminary; verify factual claims before approval.
+- Narration targets 150–200 words, with a hard validation range of 130–210 words, for an approximately 60–90 second Reel. AI evaluation is preliminary; verify factual claims before approval.
 - Configure `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.5-flash-lite`, and `GEMINI_API_KEY` in the repository-root `.env`. Never expose the key to the frontend or commit `.env`.
 - To use another OpenAI-compatible provider later, set `LLM_PROVIDER=openai-compatible`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_BASE_URL` (base URL should omit `/chat/completions`).
 - No database migration is required. Legacy trend tables remain in existing databases but the Trend Discovery UI and API are removed.
