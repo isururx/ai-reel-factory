@@ -33,8 +33,18 @@
 - Meta failures do not re-run video generation.
 - Provider-specific details live behind an adapter. Do not assume a live Vast.ai endpoint exists.
 
-## Initial implementation slice
-This branch starts the durable data foundation: batch records, video production jobs, Page publishing settings, scheduled publication records and an Alembic migration. Next slices add API validation and Celery workers, then the provider adapter, scheduling logic, Facebook publishing, UI and tests.
+## Implemented batch-generation slice
+- `POST /api/v1/pages/{page_id}/script-batches` creates a durable batch and enqueues it through Celery.
+- `GET /api/v1/pages/{page_id}/script-batches` lists batches; `GET /api/v1/pages/{page_id}/script-batches/{batch_id}` returns batch progress.
+- A batch pins one strategy and strategy version belonging to the selected Page.
+- Automatic mode can build a brief from the Page profile and selected strategy; manual mode requires a user brief.
+- Pattern selection supports automatic, manual and hybrid modes. All selected patterns are validated against both owner and Page.
+- Quantity supports an explicit count or the remaining daily publication capacity from Page publishing settings.
+- The worker generates scripts individually and commits each successful script, so a later item failure does not erase earlier results.
+- Generated scripts remain in `review` status. No video job or publication is created by this batch worker.
+- Batch ID, strategy version and selected pattern IDs are stored in each generated script's `script_data` for Script Studio filtering.
+
+The Script Studio now includes batch controls, pattern selection, quantity configuration, live batch progress and batch-origin labels on generated scripts. Worker recovery/re-enqueue operations, provider adapter, video jobs, scheduling and Facebook publishing remain future work. Run the backend tests, frontend lint/build and exercise Redis/Celery locally before treating this slice as production-ready.
 
 ## Required deployment configuration before live production
 - Vast.ai instance/API endpoint, workflow contract, authentication and callback/polling mechanism.

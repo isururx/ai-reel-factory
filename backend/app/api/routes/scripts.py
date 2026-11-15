@@ -3,7 +3,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.auth import CurrentUser
-from app.core.settings import settings
 from app.database.session import get_db
 from app.models.content import ApprovalEvent, ContentScript, ScriptVersion
 from app.models.page import Page, PageProfile
@@ -89,7 +88,6 @@ def generate_script_for_page(
             script_data={
                 **item["script_data"],
                 "title": item["title"],
-                "generation_provider": settings.llm_provider,
                 "generation_brief": payload.brief,
             },
         )
@@ -169,6 +167,17 @@ def decide_script(
     )
     if version is None:
         raise HTTPException(status_code=404, detail="Script version not found.")
+    latest_version_id = db.scalar(
+        select(ScriptVersion.id)
+        .where(ScriptVersion.script_id == script_id)
+        .order_by(ScriptVersion.version_number.desc())
+        .limit(1)
+    )
+    if version.id != latest_version_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Only the latest saved script version can be approved or rejected.",
+        )
     db.add(
         ApprovalEvent(
             script_version_id=version_id,
