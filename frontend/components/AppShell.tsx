@@ -38,8 +38,8 @@ export function GenerationOverlay() {
       <div className="generation-card">
         <div className="generation-orbit"><span /><span /><span /></div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">AI script engine</p>
-        <h2 className="mt-2 text-xl font-semibold text-white">Crafting your scripts</h2>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-slate-400">Reading the selected trend, matching your Page strategy and creating three original variations.</p>
+        <h2 className="mt-2 text-xl font-semibold text-white">Crafting your final script</h2>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-slate-400">Reading the selected trend, matching your Page strategy and creating one polished original script.</p>
         <div className="generation-progress"><span /></div>
         <p className="mt-3 text-xs text-slate-500">This can take a little while. Keep this tab open.</p>
       </div>
