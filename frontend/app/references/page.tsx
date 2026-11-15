@@ -5,6 +5,13 @@ import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 type Page = { id: number; name: string; is_active: boolean };
+type ReusablePattern = { pattern: string; adaptation_idea: string };
+type AnalysisResult = {
+  summary?: string;
+  error?: string;
+  hook?: { description?: string; strength?: string };
+  reusable_patterns?: ReusablePattern[];
+};
 type Job = {
   id: number; page_id: number; source_url: string; title: string; status: string;
   queue_position: number | null; reference_video_id: number | null; error_message: string | null;
@@ -17,7 +24,7 @@ type Video = {
   id: number; page_id: number | null; title: string; source_url: string | null;
   original_filename: string; file_size: number; views_count: number | null;
   reactions_count: number | null; shares_count: number | null; comments_count: number | null;
-  manual_comments: string[]; analysis_status: string; analysis_result: Record<string, any>;
+  manual_comments: string[]; analysis_status: string; analysis_result: AnalysisResult | null;
   analyzed_at: string | null; created_at: string;
   analysis_provider: string | null; analysis_model: string | null;
   analysis_attempt_count: number; analysis_total_duration_ms: number | null;
@@ -336,7 +343,7 @@ export default function ReferencesPage() {
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400"><span>Views: {metric(video.views_count)}</span><span>Reactions: {metric(video.reactions_count)}</span><span>Shares: {metric(video.shares_count)}</span><span>Comments: {metric(video.comments_count)}</span></div>
                       <p className="mt-3 text-sm leading-6 text-slate-300">{video.analysis_result?.summary ?? video.analysis_result?.error ?? "Analysis summary unavailable."}</p>
                       {video.analysis_result?.hook?.description && <p className="mt-2 text-xs text-slate-400"><strong className="text-slate-200">Hook:</strong> {video.analysis_result.hook.description}</p>}
-                      {Array.isArray(video.analysis_result?.reusable_patterns) && <div className="mt-3"><p className="text-xs font-semibold text-slate-200">Reusable patterns</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-400">{video.analysis_result.reusable_patterns.slice(0, 3).map((item: any, index: number) => <li key={index}>{item.pattern} — {item.adaptation_idea}</li>)}</ul></div>}
+                      {Array.isArray(video.analysis_result?.reusable_patterns) && <div className="mt-3"><p className="text-xs font-semibold text-slate-200">Reusable patterns</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-400">{video.analysis_result.reusable_patterns.slice(0, 3).map((item, index) => <li key={index}>{item.pattern} — {item.adaptation_idea}</li>)}</ul></div>}
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4"><span className="text-[11px] text-slate-500">{video.manual_comments.length} comment samples</span><button onClick={() => void openVideo(video.id)} className="text-sm font-semibold text-cyan-300">Open stored video ↗</button></div>
                       <div className="mt-3 border-t border-white/10 pt-3">
                         <button type="button" onClick={() => void loadAttemptLogs(video.id)} disabled={loadingLogs === video.id} className="text-xs font-semibold text-cyan-300 disabled:opacity-50">
