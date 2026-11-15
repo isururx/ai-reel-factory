@@ -86,6 +86,21 @@ def create_script_batch(
     if strategy_version is None:
         raise HTTPException(status_code=404, detail="Strategy version does not belong to the selected strategy.")
 
+    if payload.mode == "manual" and not payload.brief:
+        raise HTTPException(
+            status_code=422,
+            detail="Manual batch requires a brief describing the scripts to generate.",
+        )
+
+    brief = payload.brief
+    if payload.mode == "automatic" and not brief:
+        brief = (
+            f"Create a short-form Reel about {profile.niche} for {profile.target_audience}. "
+            f"Use the selected strategy '{strategy.name}': {strategy.description}. "
+            f"Follow this strategy configuration: {strategy_version.configuration}. "
+            f"Write in {profile.language or 'the Page language'} with this tone: {profile.tone or 'the Page tone'}."
+        )
+
     if payload.fill_remaining_daily_slots:
         count = _remaining_daily_slots(page_id, user.id, db)
         if count < 1:
@@ -133,7 +148,7 @@ def create_script_batch(
     } for pattern in selected_patterns]
 
     snapshot = {
-        "brief": payload.brief,
+        "brief": brief,
         "source_url": str(payload.source_url) if payload.source_url else None,
         "profile": _profile_snapshot(profile),
         "strategy": strategy_version.configuration,
