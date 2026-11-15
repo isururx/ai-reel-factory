@@ -204,7 +204,7 @@ export default function ScriptsPage() {
         { method: "POST", body: JSON.stringify({ decision, comments: "" }) },
       );
       await loadScripts(selected.page_id, selected.id);
-      setNotice(decision === "approved" ? "Script approved. This exact version is ready for production." : "Script rejected. You can edit it and save a new version.");
+      setNotice(decision === "approved" ? "Script approved. Video generation has been queued." : "Script rejected. You can edit it and save a new version.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save the review decision.");
     } finally {
