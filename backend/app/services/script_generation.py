@@ -88,6 +88,10 @@ def generate_script(context: dict[str, Any]) -> dict[str, Any]:
     if not all(isinstance(item.get(key), str) and item[key].strip()
                for key in ("title", "hook", "narration")):
         raise RuntimeError("The generated script is missing its title, hook, or narration.")
+    narration_words = len(item["narration"].strip().split())
+    if not 120 <= narration_words <= 170:
+        raise RuntimeError(f"The narration must contain 120–170 words; received {narration_words}. Please regenerate.")
+
     hashtags = item.get("hashtags", [])
     if not isinstance(hashtags, list) or any(not isinstance(tag, str) for tag in hashtags):
         raise RuntimeError("The generated hashtags must be an array of strings.")
