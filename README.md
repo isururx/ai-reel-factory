@@ -79,22 +79,12 @@ The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localh
 6. Use original content and properly licensed assets.
 
 
-## M5 Trend discovery
-- Collect RSS 2.0 and Atom feeds using `POST /api/v1/trends/collect` with a list of feed URLs.
-- View the account's collected source items with `GET /api/v1/trends`.
-- View Page-specific ranked suggestions with `GET /api/v1/pages/{page_id}/trends`.
-- Save, dismiss or select a suggestion with `PATCH /api/v1/pages/{page_id}/trends/{recommendation_id}` and a status of `saved`, `dismissed` or `selected`.
-- Collection deduplicates source URLs per account and creates separate recommendations using each active Page's niche and audience profile.
-- The initial score is a transparent heuristic based on keyword overlap and freshness; it is a triage aid, not a prediction of virality.
-- Apply the new schema with `python -m alembic upgrade head` from the backend directory.
-- Google Trends, Reddit and YouTube can be connected in later adapters. For now, use their official RSS feeds where available; no scraping or private competitor analytics are used.
-
-
-## M6 AI script generation
-- Select a Page-specific trend recommendation in `/trends`, then generate three distinct script variations.
-- Review and edit drafts in `/scripts`. Editing creates an immutable new version; approval applies only to the exact version.
-- The API loads the Page profile and active strategy before generation. Human review is required; generated evaluations are preliminary and do not replace fact-checking.
+## Script Studio
+- Generate a single finalized Reel script directly from `POST /api/v1/pages/{page_id}/scripts/generate` by supplying a creative brief and optional source URL.
+- The generation prompt uses the selected Page profile and active content strategy. The brief supplies the topic, angle and creative direction.
+- Open `/scripts` to generate, edit, save immutable versions, and approve or reject the exact saved version.
+- Narration targets 120–170 words for an approximately 60–90 second Reel. AI evaluation is preliminary; verify factual claims before approval.
 - Configure `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.5-flash-lite`, and `GEMINI_API_KEY` in the repository-root `.env`. Never expose the key to the frontend or commit `.env`.
 - To use another OpenAI-compatible provider later, set `LLM_PROVIDER=openai-compatible`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_BASE_URL` (base URL should omit `/chat/completions`).
-- Install backend dependencies with `pip install -e ".[dev]"`; no database migration is required for M6.
-- Routes: `POST /api/v1/pages/{page_id}/trends/{recommendation_id}/generate-scripts`, `GET /api/v1/pages/{page_id}/scripts`, `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions`, and `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions/{version_id}/decision`.
+- No database migration is required. Legacy trend tables remain in existing databases but the Trend Discovery UI and API are removed.
+- Routes: `POST /api/v1/pages/{page_id}/scripts/generate`, `GET /api/v1/pages/{page_id}/scripts`, `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions`, and `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions/{version_id}/decision`.
