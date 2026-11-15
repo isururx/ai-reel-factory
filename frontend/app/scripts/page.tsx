@@ -2,6 +2,7 @@
 
 import AppShell, { GenerationOverlay } from "@/components/AppShell";
 import { authenticatedFetch } from "@/lib/supabase";
+import BatchStudio from "@/components/BatchStudio";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Page = { id: number; name: string; is_active: boolean };
@@ -211,6 +212,9 @@ export default function ScriptsPage() {
   }
 
   const evaluation = latest?.script_data?.evaluation;
+  const refreshScripts = useCallback(() => {
+    if (pageId !== "") void loadScripts(pageId);
+  }, [pageId, loadScripts]);
 
   return (
     <AppShell active="scripts">
@@ -221,7 +225,7 @@ export default function ScriptsPage() {
             <div>
               <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-300"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_#55dff2]" /> Editorial workspace</div>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Script studio</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">One idea. One polished script. Make your final edits, then approve the exact version that moves into production.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Generate one script or a full batch. Review, edit and approve each exact version before production.</p>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-300/10 text-lg text-cyan-200">✎</span>
@@ -243,6 +247,8 @@ export default function ScriptsPage() {
           </section>
 
           <section className="mb-6 rounded-2xl border border-cyan-300/20 bg-[#0d1825] p-5 sm:p-7"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Create directly</p><h2 className="mt-2 text-xl font-semibold text-white">What should this Reel be about?</h2><p className="mt-1 text-sm leading-6 text-slate-400">Describe the topic, angle, key points or story. The AI uses this brief with the selected Page profile and active strategy.</p><textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={5} maxLength={5000} placeholder="Example: Explain how octopuses change colour to camouflage themselves. Keep it fascinating and accessible, explain the science simply, and finish with an interesting question..." className="mt-4 w-full resize-y rounded-xl border border-white/10 bg-[#080f19] p-4 text-sm leading-7 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/40" /><div className="mt-3 flex flex-col gap-3 sm:flex-row"><input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="Optional source URL for fact-checking" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#080f19] px-4 py-3 text-xs text-slate-300 outline-none focus:border-cyan-300/40" /><button onClick={() => void generateScript()} disabled={generating || loading || pageId === "" || brief.trim().length < 20} className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-40">{generating ? "Generating..." : "Generate final script ↗"}</button></div><p className="mt-2 text-[10px] text-slate-500">{brief.length}/5000 characters · Minimum 20. Source URL is saved for review and is not automatically fetched.</p></section>
+
+          <BatchStudio pageId={pageId} onScriptsChanged={refreshScripts} />
 
           {loading ? (
             <div className="grid gap-5 lg:grid-cols-[280px_1fr]"><div className="skeleton-card h-64" /><div className="skeleton-card h-[620px]" /></div>
