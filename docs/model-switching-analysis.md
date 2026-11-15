@@ -28,7 +28,7 @@ Add these backend-only values to the root `.env` file:
 ```env
 GEMINI_API_KEY=your_google_ai_studio_key
 GEMINI_ANALYSIS_MODEL=gemini-3.5-flash-lite
-GEMINI_FALLBACK_MODEL=gemini-2.5-flash
+GEMINI_FALLBACK_MODEL=gemini-3.8-flash
 ```
 
 Never commit the real `.env` file or expose provider keys to the frontend. NVIDIA credentials and NIM settings are not required.
