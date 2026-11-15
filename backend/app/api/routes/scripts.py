@@ -10,6 +10,7 @@ from app.models.strategy import PageStrategy
 from app.models.trend import PageTrendRecommendation, TrendItem
 from app.schemas.scripts import ContentScriptRead, ScriptDecision, ScriptVersionRead, ScriptVersionUpdate
 from app.services.script_generation import generate_variations
+from app.services.script_intelligence import build_script_intelligence_context
 
 router = APIRouter(tags=["AI script generation"])
 
@@ -41,11 +42,21 @@ def generate_scripts(page_id: int, recommendation_id: int, user: CurrentUser, db
         active = next((v for v in reversed(strategy.versions) if v.status == "active"), None)
         strategy_config = (active or max(strategy.versions, key=lambda v: v.version_number)).configuration
     trend = recommendation.trend
+    creative_intelligence = build_script_intelligence_context(
+        db,
+        owner_id=user.id,
+        page_id=page_id,
+        trend_title=trend.title,
+        trend_summary=trend.summary,
+        niche=profile.niche,
+        target_audience=profile.target_audience,
+    )
     context = {"profile": {"niche": profile.niche, "target_audience": profile.target_audience,
         "language": profile.language, "tone": profile.tone, "preferred_formats": profile.preferred_formats,
         "restricted_topics": profile.restricted_topics, "fact_check_level": profile.fact_check_level},
         "strategy": strategy_config, "trend": {"title": trend.title, "summary": trend.summary,
         "source_name": trend.source_name, "published_at": trend.published_at.isoformat() if trend.published_at else None},
+        "creative_intelligence": creative_intelligence,
         "source_url": trend.source_url}
     try: variations = generate_variations(context)
     except Exception as exc: raise HTTPException(status_code=502, detail=f"Script generation failed: {exc}") from exc
@@ -53,7 +64,8 @@ def generate_scripts(page_id: int, recommendation_id: int, user: CurrentUser, db
     for index, item in enumerate(variations, start=1):
         script.versions.append(ScriptVersion(version_number=index, hook=item["hook"], narration=item["narration"],
             caption=item["caption"], hashtags=item["hashtags"], script_data={**item["script_data"],
-            "variation": index, "title": item["title"], "generation_provider": settings.llm_provider}))
+            "variation": index, "title": item["title"], "generation_provider": settings.llm_provider,
+            "creative_intelligence": creative_intelligence["provenance"]}))
     db.add(script); db.commit()
     return _owned_script(page_id, script.id, db)
 
