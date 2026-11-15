@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.pages import router as pages_router
 from app.api.routes.strategies import router as strategies_router
 from app.api.routes.scripts import router as scripts_router
+from app.api.routes.script_batches import router as script_batches_router
 from app.api.routes.references import router as references_router
 from app.api.routes.reference_posts import router as reference_posts_router
 from app.api.routes.reference_videos import router as reference_videos_router
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(pages_router, prefix="/api/v1")
 app.include_router(strategies_router, prefix="/api/v1")
 app.include_router(scripts_router, prefix="/api/v1")
+app.include_router(script_batches_router, prefix="/api/v1")
 app.include_router(references_router, prefix="/api/v1")
 app.include_router(reference_posts_router, prefix="/api/v1")
 app.include_router(reference_videos_router, prefix="/api/v1")
