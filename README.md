@@ -98,3 +98,13 @@ The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localh
 - To use another OpenAI-compatible provider later, set `LLM_PROVIDER=openai-compatible`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_BASE_URL` (base URL should omit `/chat/completions`).
 - Install backend dependencies with `pip install -e ".[dev]"`; no database migration is required for M6.
 - Routes: `POST /api/v1/pages/{page_id}/trends/{recommendation_id}/generate-scripts`, `GET /api/v1/pages/{page_id}/scripts`, `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions`, and `POST /api/v1/pages/{page_id}/scripts/{script_id}/versions/{version_id}/decision`.
+
+
+## M7 Intelligence-driven script generation
+- Script generation retrieves active creative patterns belonging to the authenticated owner and selected Page only.
+- Patterns are ranked using lightweight topic overlap, supporting-video count, occurrence count and extraction confidence; up to 12 are included.
+- Up to two recent evidence examples per selected pattern are passed as context, with source video IDs and timestamps.
+- Gemini is instructed to adapt abstract techniques without copying reference dialogue or distinctive expression.
+- Every generated script version records the Page-specific pattern provenance in `script_data.creative_intelligence`; Script Studio displays the patterns used.
+- If no active patterns exist, generation continues using the Page profile, strategy and selected trend.
+- No database migration is required. See [M7 documentation](docs/m7-intelligence-script-generation.md).
