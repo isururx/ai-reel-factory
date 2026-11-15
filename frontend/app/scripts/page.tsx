@@ -1,6 +1,6 @@
 "use client";
 
-import AppShell from "@/components/AppShell";
+import AppShell, { GenerationOverlay } from "@/components/AppShell";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -87,6 +87,9 @@ export default function ScriptsPage() {
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [brief, setBrief] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   const selected = scripts.find((script) => script.id === selectedId) ?? scripts[0] ?? null;
   const latest = useMemo(() => selected ? [...selected.versions].sort((a, b) => b.version_number - a.version_number)[0] : null, [selected]);
@@ -134,6 +137,16 @@ export default function ScriptsPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "Could not load scripts."))
       .finally(() => setLoading(false));
   }, [pageId, loadScripts]);
+
+  async function generateScript() {
+    if (pageId === "" || brief.trim().length < 20) { setError("Choose a Page and enter a brief with at least 20 characters."); return; }
+    setGenerating(true); setError(""); setNotice("");
+    try {
+      const created = await api<ContentScript>("/pages/" + pageId + "/scripts/generate", { method: "POST", body: JSON.stringify({ brief: brief.trim(), source_url: sourceUrl.trim() || null }) });
+      setBrief(""); setSourceUrl(""); await loadScripts(pageId, created.id); setNotice("Your script has been generated. Review and edit it before approval.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not generate your script."); }
+    finally { setGenerating(false); }
+  }
 
   function chooseScript(script: ContentScript) {
     setSelectedId(script.id);
@@ -201,6 +214,7 @@ export default function ScriptsPage() {
 
   return (
     <AppShell active="scripts">
+      {generating && <GenerationOverlay />}
       <main className="min-h-screen text-slate-100">
         <div className="mx-auto max-w-[1440px] px-4 py-7 sm:px-6 lg:px-10 lg:py-10">
           <header className="mb-8 flex flex-col justify-between gap-5 border-b border-white/[0.08] pb-7 lg:flex-row lg:items-end">
@@ -228,14 +242,16 @@ export default function ScriptsPage() {
             <div className="flex items-center gap-4 text-xs text-slate-500"><span>{scripts.length} script{scripts.length === 1 ? "" : "s"} in this Page</span><button onClick={() => pageId !== "" && void loadScripts(pageId)} disabled={loading || pageId === ""} className="rounded-lg border border-white/10 px-3 py-2 text-slate-300 hover:bg-white/5 disabled:opacity-40">Refresh ↻</button></div>
           </section>
 
+          <section className="mb-6 rounded-2xl border border-cyan-300/20 bg-[#0d1825] p-5 sm:p-7"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Create directly</p><h2 className="mt-2 text-xl font-semibold text-white">What should this Reel be about?</h2><p className="mt-1 text-sm leading-6 text-slate-400">Describe the topic, angle, key points or story. The AI uses this brief with the selected Page profile and active strategy.</p><textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={5} maxLength={5000} placeholder="Example: Explain how octopuses change colour to camouflage themselves. Keep it fascinating and accessible, explain the science simply, and finish with an interesting question..." className="mt-4 w-full resize-y rounded-xl border border-white/10 bg-[#080f19] p-4 text-sm leading-7 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/40" /><div className="mt-3 flex flex-col gap-3 sm:flex-row"><input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="Optional source URL for fact-checking" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#080f19] px-4 py-3 text-xs text-slate-300 outline-none focus:border-cyan-300/40" /><button onClick={() => void generateScript()} disabled={generating || loading || pageId === "" || brief.trim().length < 20} className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-40">{generating ? "Generating..." : "Generate final script ↗"}</button></div><p className="mt-2 text-[10px] text-slate-500">{brief.length}/5000 characters · Minimum 20. Source URL is saved for review and is not automatically fetched.</p></section>
+
           {loading ? (
             <div className="grid gap-5 lg:grid-cols-[280px_1fr]"><div className="skeleton-card h-64" /><div className="skeleton-card h-[620px]" /></div>
           ) : !selected ? (
             <section className="rounded-3xl border border-dashed border-white/15 bg-white/[0.015] px-6 py-16 text-center">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] text-2xl text-cyan-200">✦</div>
               <h2 className="mt-5 text-xl font-semibold">Your next script starts with an idea</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Choose a trend in Discover and generate one finalized draft. It will appear here ready for your review.</p>
-              <a href="/trends" className="mt-6 inline-flex rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200">Go to trend discovery ↗</a>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Write a topic or creative brief above and generate your first script directly from this workspace.</p>
+              
             </section>
           ) : latest ? (
             <div className="grid items-start gap-5 xl:grid-cols-[270px_minmax(0,1fr)]">
