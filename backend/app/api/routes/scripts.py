@@ -169,6 +169,17 @@ def decide_script(
     )
     if version is None:
         raise HTTPException(status_code=404, detail="Script version not found.")
+    latest_version_id = db.scalar(
+        select(ScriptVersion.id)
+        .where(ScriptVersion.script_id == script_id)
+        .order_by(ScriptVersion.version_number.desc())
+        .limit(1)
+    )
+    if version.id != latest_version_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Only the latest saved script version can be approved or rejected.",
+        )
     db.add(
         ApprovalEvent(
             script_version_id=version_id,
