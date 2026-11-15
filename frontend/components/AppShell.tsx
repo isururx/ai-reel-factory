@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import AuthActions from "@/components/AuthActions";
 
 type AppSection = "overview" | "strategies" | "scripts" | "references" | "intelligence";
@@ -51,21 +52,21 @@ export default function AppShell({ active, children }: { active: AppSection; chi
     <div className="app-shell">
       <div className="app-ambient" />
       <header className="app-topbar">
-        <a href="/" className="brand-lockup">
+        <Link href="/" className="brand-lockup">
           <span className="brand-mark">✦</span>
           <span><strong>AI REEL</strong><small>FACTORY</small></span>
-        </a>
+        </Link>
         <nav className="app-nav" aria-label="Main navigation">
           {links.map((link) => (
-            <a key={link.id} href={link.href} className={active === link.id ? "app-nav-link active" : "app-nav-link"}>
+            <Link key={link.id} href={link.href} className={active === link.id ? "app-nav-link active" : "app-nav-link"}>
               <span className="nav-icon">{link.icon}</span>{link.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="app-account"><span className="hidden text-[11px] text-slate-500 sm:inline">WORKSPACE</span><AuthActions /></div>
       </header>
       <div className="app-mobile-nav">
-        {links.map((link) => <a key={link.id} href={link.href} className={active === link.id ? "active" : ""}>{link.icon}<span>{link.label}</span></a>)}
+        {links.map((link) => <Link key={link.id} href={link.href} className={active === link.id ? "active" : ""}>{link.icon}<span>{link.label}</span></Link>)}
       </div>
       <div className="app-content">{children}</div>
       <footer className="app-global-footer"><span>AI REEL FACTORY</span><span>Content operations workspace · v0.8</span></footer>
