@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     llm_model: str = "gemini-3.5-flash-lite"
     gemini_api_key: str | None = None
     gemini_analysis_model: str = "gemini-3.5-flash-lite"
-    gemini_fallback_model: str = "gemini-2.5-flash"
+    gemini_fallback_model: str = "gemini-3.8-flash"
     llm_api_key: str | None = None
     llm_base_url: str | None = None
     meta_access_token: str | None = None
