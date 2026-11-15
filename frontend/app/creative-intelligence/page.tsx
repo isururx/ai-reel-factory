@@ -1,6 +1,7 @@
 "use client";
 
 import AppShell, { LoadingSkeleton } from "@/components/AppShell";
+import Link from "next/link";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -102,7 +103,7 @@ export default function CreativeIntelligencePage() {
               <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Creative Intelligence</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Reusable hooks, storytelling techniques, retention devices and editing patterns extracted automatically from your selected reference videos.</p>
             </div>
-            <a href="/references" className="rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-300/10">Submit reference video ↗</a>
+            <Link href="/references" className="rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-300/10">Submit reference video ↗</Link>
           </header>
 
           {error && <div role="alert" className="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</div>}
@@ -141,7 +142,7 @@ export default function CreativeIntelligencePage() {
                     {categories.map(item => <button key={item} onClick={() => setCategory(item)} className={category === item ? "rounded-full bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-slate-950" : "rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-400 hover:border-cyan-300/30"}>{item.replaceAll("_", " ")}</button>)}
                   </div>
                   {patterns.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-white/10 p-8 text-center"><p className="text-sm text-slate-300">No patterns extracted yet.</p><p className="mt-2 text-xs text-slate-500">Submit reference videos and the analysis worker will build this Page's library automatically.</p></div>
+                    <div className="rounded-xl border border-dashed border-white/10 p-8 text-center"><p className="text-sm text-slate-300">No patterns extracted yet.</p><p className="mt-2 text-xs text-slate-500">Submit reference videos and the analysis worker will build this Page&apos;s library automatically.</p></div>
                   ) : (
                     <div className="space-y-3">
                       {patterns.map(pattern => <button key={pattern.id} onClick={() => void openPattern(pattern)} className={selected?.id === pattern.id ? "w-full rounded-xl border border-cyan-300/40 bg-cyan-300/[0.07] p-4 text-left" : "w-full rounded-xl border border-white/10 bg-white/[0.02] p-4 text-left hover:border-white/20"}>
