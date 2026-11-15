@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from app.core.settings import settings
 from app.database.session import SessionLocal
 from app.models.content import ContentScript, ScriptVersion
 from app.models.page import Page
@@ -76,7 +75,6 @@ def generate_script_batch(self, batch_id: int) -> dict:
                     script_data={
                         **item["script_data"],
                         "title": item["title"],
-                        "generation_provider": settings.llm_provider,
                         "generation_brief": snapshot["brief"],
                         "batch_id": batch.id,
                         "strategy_id": batch.strategy_id,
