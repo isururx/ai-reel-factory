@@ -9,6 +9,35 @@ class ScriptGenerateRequest(BaseModel):
     source_url: HttpUrl | None = None
 
 
+class ScriptBatchCreate(BaseModel):
+    strategy_id: int
+    strategy_version_id: int
+    brief: str = Field(min_length=20, max_length=5000)
+    source_url: HttpUrl | None = None
+    mode: Literal["automatic", "manual"] = "automatic"
+    pattern_selection: Literal["automatic", "manual", "hybrid"] = "automatic"
+    pattern_ids: list[int] = Field(default_factory=list, max_length=20)
+    script_count: int | None = Field(default=1, ge=1, le=20)
+    fill_remaining_daily_slots: bool = False
+
+
+class ScriptBatchRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    page_id: int
+    strategy_id: int
+    strategy_version_id: int
+    mode: str
+    status: str
+    requested_count: int
+    completed_count: int
+    input_snapshot: dict
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    error_message: str | None
+
+
 class ScriptVersionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
