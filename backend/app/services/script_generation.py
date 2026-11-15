@@ -1,18 +1,11 @@
 import json
+import logging
 from typing import Any
 
 from app.core.settings import settings
 from app.services.llm.gemini import GeminiProvider
-from app.services.llm.openai_compatible import OpenAICompatibleProvider
 
-
-def _provider():
-    name = settings.llm_provider.lower()
-    if name == "gemini":
-        return GeminiProvider()
-    if name in {"openai-compatible", "openrouter", "groq", "nvidia-nim"}:
-        return OpenAICompatibleProvider()
-    raise RuntimeError(f"Unsupported LLM_PROVIDER: {settings.llm_provider}")
+logger = logging.getLogger(__name__)
 
 
 def _prompt(context: dict[str, Any]) -> str:
@@ -81,8 +74,49 @@ OPTIONAL SOURCE URL:
 """
 
 
+def _generate_with_fallback(prompt: str) -> tuple[str, dict[str, Any]]:
+    """Try the configured primary Gemini model once, then the Gemini fallback once."""
+    models = [settings.llm_model, settings.gemini_fallback_model]
+    ordered_models = list(dict.fromkeys(model.strip() for model in models if model and model.strip()))
+    if not ordered_models:
+        raise RuntimeError("No Gemini script-generation models are configured.")
+
+    attempts: list[dict[str, str]] = []
+    last_error: Exception | None = None
+
+    for model in ordered_models:
+        try:
+            logger.info("Starting script generation with model=%s", model)
+            raw = GeminiProvider(model=model).generate_json(prompt)
+            attempts.append({"model": model, "status": "succeeded"})
+            logger.info("Script generation succeeded with model=%s", model)
+            return raw, {
+                "provider": "gemini",
+                "model": model,
+                "attempts": attempts,
+            }
+        except Exception as exc:
+            last_error = exc
+            attempts.append({
+                "model": model,
+                "status": "failed",
+                "error": str(exc)[:500],
+            })
+            logger.warning(
+                "Script generation failed with model=%s; switching immediately to next configured model. error=%s",
+                model,
+                str(exc)[:500],
+            )
+
+    attempted = ", ".join(ordered_models)
+    raise RuntimeError(
+        f"Script generation failed with all configured Gemini models ({attempted}). "
+        f"Last error: {last_error}"
+    ) from last_error
+
+
 def generate_script(context: dict[str, Any]) -> dict[str, Any]:
-    raw = _provider().generate_json(_prompt(context))
+    raw, generation = _generate_with_fallback(_prompt(context))
     try:
         item = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -121,5 +155,8 @@ def generate_script(context: dict[str, Any]) -> dict[str, Any]:
             "estimated_duration_seconds": item.get("estimated_duration_seconds"),
             "evaluation": evaluation,
             "source_url": context["source_url"],
+            "generation_provider": generation["provider"],
+            "generation_model": generation["model"],
+            "generation_attempts": generation["attempts"],
         },
     }
