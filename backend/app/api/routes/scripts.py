@@ -6,9 +6,13 @@ from app.core.auth import CurrentUser
 from app.database.session import get_db
 from app.models.content import ApprovalEvent, ContentScript, ScriptVersion
 from app.models.page import Page, PageProfile
+from app.models.production_pipeline import VideoProductionJob
 from app.models.strategy import PageStrategy
 from app.schemas.scripts import ContentScriptRead, ScriptDecision, ScriptGenerateRequest, ScriptVersionRead, ScriptVersionUpdate
 from app.services.script_generation import generate_script
+from app.schemas.video_generation import VideoProductionJobRead
+from app.tasks.video_generation import render_video_job
+from app.core.settings import settings
 
 router = APIRouter(tags=["AI script generation"])
 
@@ -187,5 +191,53 @@ def decide_script(
         )
     )
     script.status = "approved" if payload.decision == "approved" else "rejected"
+
+    video_job = None
+    if payload.decision == "approved":
+        video_job = db.scalar(select(VideoProductionJob).where(
+            VideoProductionJob.script_version_id == version_id,
+        ))
+        if video_job is None:
+            video_job = VideoProductionJob(
+                owner_id=user.id,
+                page_id=page_id,
+                script_id=script_id,
+                script_version_id=version_id,
+                status="queued",
+                provider=settings.video_provider,
+                request_snapshot={
+                    "title": (version.script_data or {}).get("title") or script.title,
+                    "hook": version.hook,
+                    "narration": version.narration,
+                    "caption": version.caption,
+                    "hashtags": version.hashtags or [],
+                    "script_data": version.script_data or {},
+                },
+            )
+            db.add(video_job)
+            db.flush()
     db.commit()
+
+    if video_job is not None and video_job.status == "queued":
+        try:
+            render_video_job.delay(video_job.id)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Approval and video job were saved, but the worker could not be notified. Check Redis and start the Celery worker.",
+            ) from exc
     return _owned_script(page_id, script_id, db)
+
+
+@router.get(
+    "/pages/{page_id}/video-jobs",
+    response_model=list[VideoProductionJobRead],
+)
+def list_video_jobs(page_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    _owned_page(page_id, user.id, db)
+    return list(db.scalars(
+        select(VideoProductionJob)
+        .where(VideoProductionJob.page_id == page_id, VideoProductionJob.owner_id == user.id)
+        .order_by(VideoProductionJob.created_at.desc(), VideoProductionJob.id.desc())
+        .limit(100)
+    ).all())
