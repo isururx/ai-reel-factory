@@ -14,7 +14,7 @@ Before calling the LLM, the API retrieves patterns matching all of these conditi
 
 Patterns are ranked using topic-token overlap with the trend title/summary and Page niche/audience, followed by supporting-video count, occurrence count and extraction confidence. At most 12 patterns are sent to the model.
 
-For each selected pattern, the latest two evidence records are included with their source video IDs and timestamps. Raw observed dialogue is not sent as reusable script material.
+For each selected pattern, the latest evidence records from up to two distinct supporting videos are included with their source video IDs and timestamps. Raw observed dialogue is not sent as reusable script material.
 
 ## Prompt rules
 
