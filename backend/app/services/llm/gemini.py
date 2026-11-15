@@ -1,4 +1,3 @@
-
 from google import genai
 from google.genai import types
 
@@ -6,15 +5,21 @@ from app.core.settings import settings
 
 
 class GeminiProvider:
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         if not settings.gemini_api_key:
             raise RuntimeError("GEMINI_API_KEY is not configured.")
 
-        self.client = genai.Client(api_key=settings.gemini_api_key)
+        self.model = model or settings.llm_model
+        self.client = genai.Client(
+            api_key=settings.gemini_api_key,
+            http_options=types.HttpOptions(
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
+        )
 
     def generate_json(self, prompt: str) -> str:
         response = self.client.models.generate_content(
-            model=settings.llm_model,
+            model=self.model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -24,15 +29,10 @@ class GeminiProvider:
         )
 
         if not response.text:
-            raise RuntimeError("Gemini returned an empty response.")
+            raise RuntimeError(f"Gemini model {self.model} returned an empty response.")
 
-        # Diagnostic information for incomplete generations
         for candidate in response.candidates or []:
-            print(
-                "Gemini finish reason:",
-                candidate.finish_reason,
-            )
+            print("Gemini finish reason:", candidate.finish_reason)
 
-        print("Gemini response length:", len(response.text))
-
+        print(f"Gemini model: {self.model}; response length: {len(response.text)}")
         return response.text

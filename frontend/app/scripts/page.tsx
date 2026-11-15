@@ -2,6 +2,7 @@
 
 import AppShell, { GenerationOverlay } from "@/components/AppShell";
 import { authenticatedFetch } from "@/lib/supabase";
+import BatchStudio from "@/components/BatchStudio";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Page = { id: number; name: string; is_active: boolean };
@@ -25,6 +26,7 @@ type ScriptVersion = {
     };
     source_url?: string;
     edited_by_human?: boolean;
+    batch_id?: number;
   };
   created_at: string;
 };
@@ -211,6 +213,10 @@ export default function ScriptsPage() {
   }
 
   const evaluation = latest?.script_data?.evaluation;
+  const refreshScripts = useCallback(() => {
+    if (pageId === "") return;
+    void api<ContentScript[]>(`/pages/${pageId}/scripts`).then(setScripts).catch((e) => setError(e instanceof Error ? e.message : "Could not refresh generated scripts."));
+  }, [pageId]);
 
   return (
     <AppShell active="scripts">
@@ -221,7 +227,7 @@ export default function ScriptsPage() {
             <div>
               <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-300"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_#55dff2]" /> Editorial workspace</div>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Script studio</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">One idea. One polished script. Make your final edits, then approve the exact version that moves into production.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Generate one script or a full batch. Review, edit and approve each exact version before production.</p>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-300/10 text-lg text-cyan-200">✎</span>
@@ -244,6 +250,8 @@ export default function ScriptsPage() {
 
           <section className="mb-6 rounded-2xl border border-cyan-300/20 bg-[#0d1825] p-5 sm:p-7"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Create directly</p><h2 className="mt-2 text-xl font-semibold text-white">What should this Reel be about?</h2><p className="mt-1 text-sm leading-6 text-slate-400">Describe the topic, angle, key points or story. The AI uses this brief with the selected Page profile and active strategy.</p><textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={5} maxLength={5000} placeholder="Example: Explain how octopuses change colour to camouflage themselves. Keep it fascinating and accessible, explain the science simply, and finish with an interesting question..." className="mt-4 w-full resize-y rounded-xl border border-white/10 bg-[#080f19] p-4 text-sm leading-7 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/40" /><div className="mt-3 flex flex-col gap-3 sm:flex-row"><input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="Optional source URL for fact-checking" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#080f19] px-4 py-3 text-xs text-slate-300 outline-none focus:border-cyan-300/40" /><button onClick={() => void generateScript()} disabled={generating || loading || pageId === "" || brief.trim().length < 20} className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-40">{generating ? "Generating..." : "Generate final script ↗"}</button></div><p className="mt-2 text-[10px] text-slate-500">{brief.length}/5000 characters · Minimum 20. Source URL is saved for review and is not automatically fetched.</p></section>
 
+          <BatchStudio pageId={pageId} onScriptsChanged={refreshScripts} />
+
           {loading ? (
             <div className="grid gap-5 lg:grid-cols-[280px_1fr]"><div className="skeleton-card h-64" /><div className="skeleton-card h-[620px]" /></div>
           ) : !selected ? (
@@ -262,7 +270,7 @@ export default function ScriptsPage() {
                     {scripts.map((script) => {
                       const current = [...script.versions].sort((a, b) => b.version_number - a.version_number)[0];
                       return <button key={script.id} onClick={() => chooseScript(script)} className={`w-full rounded-xl border p-3 text-left transition ${script.id === selected.id ? "border-cyan-300/30 bg-cyan-300/[0.07]" : "border-white/[0.07] bg-white/[0.015] hover:bg-white/[0.04]"}`}>
-                        <div className="flex items-center justify-between gap-2"><span className="text-[10px] uppercase tracking-wider text-slate-500">Script #{script.id}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] capitalize ${statusStyle(script.status)}`}>{script.status}</span></div>
+                        <div className="flex items-center justify-between gap-2"><span className="text-[10px] uppercase tracking-wider text-slate-500">Script #{script.id}{current?.script_data?.batch_id ? ` · Batch #${current.script_data.batch_id}` : ""}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] capitalize ${statusStyle(script.status)}`}>{script.status}</span></div>
                         <p className="mt-2 line-clamp-2 text-sm font-medium leading-5 text-slate-200">{script.title}</p>
                         <p className="mt-2 text-[10px] text-slate-500">Version {current?.version_number ?? 0}</p>
                       </button>;
@@ -271,10 +279,10 @@ export default function ScriptsPage() {
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-[#0d1521]/80 p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Writing check</p>
-                  <div className="mt-4 flex items-end justify-between"><span className="text-sm text-slate-400">Narration length</span><strong className={`text-lg tabular-nums ${narrationWords >= 120 && narrationWords <= 170 ? "text-emerald-300" : "text-amber-200"}`}>{narrationWords}<span className="ml-1 text-xs font-normal text-slate-500">words</span></strong></div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full ${narrationWords >= 120 && narrationWords <= 170 ? "bg-emerald-300" : "bg-amber-300"}`} style={{ width: `${Math.min(100, narrationWords / 170 * 100)}%` }} /></div>
+                  <div className="mt-4 flex items-end justify-between"><span className="text-sm text-slate-400">Narration length</span><strong className={`text-lg tabular-nums ${narrationWords >= 130 && narrationWords <= 210 ? "text-emerald-300" : "text-amber-200"}`}>{narrationWords}<span className="ml-1 text-xs font-normal text-slate-500">words</span></strong></div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full ${narrationWords >= 130 && narrationWords <= 210 ? "bg-emerald-300" : "bg-amber-300"}`} style={{ width: `${Math.min(100, narrationWords / 210 * 100)}%` }} /></div>
                   <div className="mt-4 flex justify-between text-xs"><span className="text-slate-500">Estimated duration</span><span className="font-medium text-slate-300">~{estimatedSeconds}s</span></div>
-                  <p className="mt-3 text-[10px] leading-5 text-slate-600">Target: 120–170 narration words for an approximately 60–90 second Reel.</p>
+                  <p className="mt-3 text-[10px] leading-5 text-slate-600">Target: 150–200 narration words (hard range: 130–210) for an approximately 60–90 second Reel.</p>
                 </div>
               </aside>
 

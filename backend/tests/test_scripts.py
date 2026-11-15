@@ -55,7 +55,7 @@ def test_generate_one_script_directly_from_brief(client):
     assert body["status"] == "review"
     context = generator.call_args.args[0]
     assert context["brief"] == brief
-    assert context["source_url"] == "https://example.com/source/"
+    assert context["source_url"] == "https://example.com/source"
 
 
 def test_generation_requires_page_profile(client):
@@ -97,3 +97,33 @@ def test_edit_creates_a_new_immutable_version(client):
     )
     assert response.status_code == 201, response.text
     assert response.json()["version_number"] == 2
+
+
+
+def test_superseded_script_version_cannot_be_approved(client):
+    page_id = _seed(client)
+    with patch("app.api.routes.scripts.generate_script", return_value=_generated_script()):
+        generated = client.post(
+            f"/api/v1/pages/{page_id}/scripts/generate",
+            json={"brief": "Explain a fascinating science discovery to a general audience."},
+        ).json()
+
+    original_version_id = generated["versions"][0]["id"]
+    edited = client.post(
+        f"/api/v1/pages/{page_id}/scripts/{generated['id']}/versions",
+        json={
+            "title": "Updated title",
+            "hook": "A revised opening hook",
+            "narration": "A revised narration for this science explainer.",
+            "caption": "Updated caption.",
+            "hashtags": ["#science"],
+        },
+    )
+    assert edited.status_code == 201, edited.text
+
+    response = client.post(
+        f"/api/v1/pages/{page_id}/scripts/{generated['id']}/versions/{original_version_id}/decision",
+        json={"decision": "approved", "comments": ""},
+    )
+    assert response.status_code == 409
+    assert "latest saved script version" in response.text.lower()
