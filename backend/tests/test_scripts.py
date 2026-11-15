@@ -1,32 +1,21 @@
 from unittest.mock import patch
 
 from app.models.page import Page, PageProfile
-from app.models.trend import PageTrendRecommendation, TrendItem
 
 
-def _seed(client):
+def _seed(client, with_profile=True):
     from app.database.session import get_db
 
     db = next(client.app.dependency_overrides[get_db]())
     page = Page(name="Science", owner_id="test-user-0001")
     db.add(page)
     db.flush()
-    db.add(PageProfile(page_id=page.id, niche="Science", target_audience="General audience"))
-    trend = TrendItem(
-        owner_id="test-user-0001",
-        source_name="Test",
-        source_url="https://example.com/story",
-        title="A science discovery",
-        summary="A source summary",
-    )
-    db.add(trend)
-    db.flush()
-    recommendation = PageTrendRecommendation(page_id=page.id, trend_id=trend.id, status="selected")
-    db.add(recommendation)
+    if with_profile:
+        db.add(PageProfile(page_id=page.id, niche="Science", target_audience="General audience"))
     db.commit()
-    result = (page.id, recommendation.id)
+    page_id = page.id
     db.close()
-    return result
+    return page_id
 
 
 def _generated_script():
@@ -50,11 +39,13 @@ def _generated_script():
     }
 
 
-def test_generate_one_finalized_script_for_review(client):
-    page_id, recommendation_id = _seed(client)
+def test_generate_one_script_directly_from_brief(client):
+    page_id = _seed(client)
+    brief = "Explain an interesting science discovery for a general audience."
     with patch("app.api.routes.scripts.generate_script", return_value=_generated_script()) as generator:
         response = client.post(
-            f"/api/v1/pages/{page_id}/trends/{recommendation_id}/generate-scripts"
+            f"/api/v1/pages/{page_id}/scripts/generate",
+            json={"brief": brief, "source_url": "https://example.com/source"},
         )
 
     assert response.status_code == 201, response.text
@@ -62,27 +53,36 @@ def test_generate_one_finalized_script_for_review(client):
     assert len(body["versions"]) == 1
     assert body["versions"][0]["version_number"] == 1
     assert body["status"] == "review"
-    generator.assert_called_once()
+    context = generator.call_args.args[0]
+    assert context["brief"] == brief
+    assert context["source_url"] == "https://example.com/source"
 
 
-def test_cannot_generate_for_unselected_trend(client):
-    page_id, recommendation_id = _seed(client)
-    from app.database.session import get_db
+def test_generation_requires_page_profile(client):
+    page_id = _seed(client, with_profile=False)
+    response = client.post(
+        f"/api/v1/pages/{page_id}/scripts/generate",
+        json={"brief": "Create an interesting science explainer for a broad audience."},
+    )
+    assert response.status_code == 400
+    assert "Page profile" in response.text
 
-    db = next(client.app.dependency_overrides[get_db]())
-    db.get(PageTrendRecommendation, recommendation_id).status = "saved"
-    db.commit()
-    db.close()
 
-    response = client.post(f"/api/v1/pages/{page_id}/trends/{recommendation_id}/generate-scripts")
-    assert response.status_code == 404
+def test_generation_rejects_short_brief(client):
+    page_id = _seed(client)
+    response = client.post(
+        f"/api/v1/pages/{page_id}/scripts/generate",
+        json={"brief": "Too short"},
+    )
+    assert response.status_code == 422
 
 
 def test_edit_creates_a_new_immutable_version(client):
-    page_id, recommendation_id = _seed(client)
+    page_id = _seed(client)
     with patch("app.api.routes.scripts.generate_script", return_value=_generated_script()):
         generated = client.post(
-            f"/api/v1/pages/{page_id}/trends/{recommendation_id}/generate-scripts"
+            f"/api/v1/pages/{page_id}/scripts/generate",
+            json={"brief": "Explain a fascinating science discovery to a general audience."},
         ).json()
 
     response = client.post(
