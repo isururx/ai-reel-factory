@@ -60,7 +60,7 @@ def test_approval_creates_one_queued_video_job_and_dispatches(client):
             json={"decision": "approved", "comments": "Approved again."},
         )
         assert repeated.status_code == 200, repeated.text
-        assert dispatch.call_count == 2
+        assert dispatch.call_count == 1
 
     db = next(client.app.dependency_overrides[get_db]())
     jobs = db.scalars(select(VideoProductionJob).where(
