@@ -10,7 +10,7 @@ class GeminiProvider:
             raise RuntimeError("GEMINI_API_KEY is not configured.")
 
         self.model = model or settings.llm_model
-        self.client = genai.Client(api_key=settings.gemini_api_key)
+        self.client = genai.Client(\n            api_key=settings.gemini_api_key,\n            http_options=types.HttpOptions(\n                retry_options=types.HttpRetryOptions(attempts=1),\n            ),\n        )
 
     def generate_json(self, prompt: str) -> str:
         response = self.client.models.generate_content(
