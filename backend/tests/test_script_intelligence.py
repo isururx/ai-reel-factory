@@ -32,6 +32,7 @@ def test_script_intelligence_is_page_scoped_and_uses_active_patterns(db_session)
     active = _pattern(db_session, first_page.id)
     _pattern(db_session, first_page.id, status="emerging", name="Emerging pattern")
     _pattern(db_session, second_page.id, name="Other page pattern")
+    _pattern(db_session, first_page.id, owner_id="another-owner", name="Other owner pattern")
     db_session.commit()
 
     context = build_script_intelligence_context(
