@@ -8,8 +8,7 @@ from app.database.session import get_db
 from app.models.content import ApprovalEvent, ContentScript, ScriptVersion
 from app.models.page import Page, PageProfile
 from app.models.strategy import PageStrategy
-from app.models.trend import PageTrendRecommendation, TrendItem
-from app.schemas.scripts import ContentScriptRead, ScriptDecision, ScriptVersionRead, ScriptVersionUpdate
+from app.schemas.scripts import ContentScriptRead, ScriptDecision, ScriptGenerateRequest, ScriptVersionRead, ScriptVersionUpdate
 from app.services.script_generation import generate_script
 
 router = APIRouter(tags=["AI script generation"])
@@ -34,25 +33,17 @@ def _owned_script(page_id: int, script_id: int, db: Session) -> ContentScript:
 
 
 @router.post(
-    "/pages/{page_id}/trends/{recommendation_id}/generate-scripts",
+    "/pages/{page_id}/scripts/generate",
     response_model=ContentScriptRead,
     status_code=status.HTTP_201_CREATED,
 )
-def generate_scripts(page_id: int, recommendation_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+def generate_script_for_page(
+    page_id: int,
+    payload: ScriptGenerateRequest,
+    user: CurrentUser,
+    db: Session = Depends(get_db),
+):
     _owned_page(page_id, user.id, db)
-    recommendation = db.scalar(
-        select(PageTrendRecommendation)
-        .join(TrendItem)
-        .where(
-            PageTrendRecommendation.id == recommendation_id,
-            PageTrendRecommendation.page_id == page_id,
-            PageTrendRecommendation.status == "selected",
-            TrendItem.owner_id == user.id,
-        )
-    )
-    if recommendation is None:
-        raise HTTPException(status_code=404, detail="Selected trend idea not found. Select the idea before generating a script.")
-
     profile = db.scalar(select(PageProfile).where(PageProfile.page_id == page_id))
     if profile is None:
         raise HTTPException(status_code=400, detail="Configure this Page profile before generating a script.")
@@ -68,7 +59,6 @@ def generate_scripts(page_id: int, recommendation_id: int, user: CurrentUser, db
         active = next((version for version in reversed(strategy.versions) if version.status == "active"), None)
         strategy_config = (active or max(strategy.versions, key=lambda version: version.version_number)).configuration
 
-    trend = recommendation.trend
     context = {
         "profile": {
             "niche": profile.niche,
@@ -80,13 +70,8 @@ def generate_scripts(page_id: int, recommendation_id: int, user: CurrentUser, db
             "fact_check_level": profile.fact_check_level,
         },
         "strategy": strategy_config,
-        "trend": {
-            "title": trend.title,
-            "summary": trend.summary,
-            "source_name": trend.source_name,
-            "published_at": trend.published_at.isoformat() if trend.published_at else None,
-        },
-        "source_url": trend.source_url,
+        "brief": payload.brief,
+        "source_url": str(payload.source_url) if payload.source_url else None,
     }
     try:
         item = generate_script(context)
@@ -105,6 +90,7 @@ def generate_scripts(page_id: int, recommendation_id: int, user: CurrentUser, db
                 **item["script_data"],
                 "title": item["title"],
                 "generation_provider": settings.llm_provider,
+                "generation_brief": payload.brief,
             },
         )
     )
