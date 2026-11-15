@@ -44,7 +44,7 @@
 - Generated scripts remain in `review` status. No video job or publication is created by this batch worker.
 - Batch ID, strategy version and selected pattern IDs are stored in each generated script's `script_data` for Script Studio filtering.
 
-This is the backend batch slice only. Frontend controls, worker recovery/re-enqueue operations, provider adapter, video jobs, scheduling and Facebook publishing remain future work. Run the backend tests and exercise Redis/Celery locally before treating this slice as production-ready.
+The Script Studio now includes batch controls, pattern selection, quantity configuration, live batch progress and batch-origin labels on generated scripts. Worker recovery/re-enqueue operations, provider adapter, video jobs, scheduling and Facebook publishing remain future work. Run the backend tests, frontend lint/build and exercise Redis/Celery locally before treating this slice as production-ready.
 
 ## Required deployment configuration before live production
 - Vast.ai instance/API endpoint, workflow contract, authentication and callback/polling mechanism.
