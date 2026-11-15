@@ -65,5 +65,6 @@ Restart the FastAPI API and the Celery worker after updating code.
 ## Current limitations
 
 - Pattern matching currently uses normalized names and conservative string similarity, not embeddings.
-- R4 does not yet inject patterns into script generation; that is the next integration milestone.
+- M7 now retrieves active patterns and compact evidence for script generation, strictly scoped to the authenticated owner and selected Page. See `docs/m7-intelligence-script-generation.md`.
+- Pattern retrieval currently uses lightweight lexical overlap and maturity/support counts rather than embeddings.
 - The worker and live Gemini/R2 pipeline must be tested with real reference videos in the user's environment.
