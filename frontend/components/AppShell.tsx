@@ -3,11 +3,10 @@
 import type { ReactNode } from "react";
 import AuthActions from "@/components/AuthActions";
 
-type AppSection = "overview" | "trends" | "strategies" | "scripts" | "references" | "intelligence";
+type AppSection = "overview" | "strategies" | "scripts" | "references" | "intelligence";
 
 const links: { id: AppSection; label: string; href: string; icon: string }[] = [
   { id: "overview", label: "Overview", href: "/", icon: "◫" },
-  { id: "trends", label: "Discover", href: "/trends", icon: "⌁" },
   { id: "references", label: "References", href: "/references", icon: "◎" },
   { id: "intelligence", label: "Creative AI", href: "/creative-intelligence", icon: "✧" },
   { id: "strategies", label: "Strategies", href: "/strategies", icon: "◈" },
@@ -39,7 +38,7 @@ export function GenerationOverlay() {
         <div className="generation-orbit"><span /><span /><span /></div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">AI script engine</p>
         <h2 className="mt-2 text-xl font-semibold text-white">Crafting your final script</h2>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-slate-400">Reading the selected trend, matching your Page strategy and creating one polished original script.</p>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-slate-400">Using your brief, Page profile and active strategy to create one polished original script.</p>
         <div className="generation-progress"><span /></div>
         <p className="mt-3 text-xs text-slate-500">This can take a little while. Keep this tab open.</p>
       </div>
