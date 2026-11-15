@@ -84,7 +84,7 @@ The FastAPI backend allows the configured FRONTEND_ORIGIN (default http://localh
 - The generation prompt uses the selected Page profile and active content strategy. The brief supplies the topic, angle and creative direction.
 - Open `/scripts` to generate, edit, save immutable versions, and approve or reject the exact saved version.
 - Narration targets 150–200 words, with a hard validation range of 130–210 words, for an approximately 60–90 second Reel. AI evaluation is preliminary; verify factual claims before approval.
-- Configure `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.5-flash-lite`, and `GEMINI_API_KEY`, and `GEMINI_FALLBACK_MODEL=gemini-2.5-flash` in the repository-root `.env`. Never expose the key to the frontend or commit `.env`.
+- Configure `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.5-flash-lite`, `GEMINI_API_KEY`, and `GEMINI_FALLBACK_MODEL=gemini-2.5-flash` in the repository-root `.env`. Never expose the key to the frontend or commit `.env`.
 - To use another OpenAI-compatible provider later, set `LLM_PROVIDER=openai-compatible`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_BASE_URL` (base URL should omit `/chat/completions`).
 - Run `python -m alembic upgrade head` from the backend directory before using batch-generation and production-pipeline tables. Legacy trend tables may remain in existing databases, but the Trend Discovery UI and API are removed.
 - Batch routes: `POST /api/v1/pages/{page_id}/script-batches`, `GET /api/v1/pages/{page_id}/script-batches`, and `GET /api/v1/pages/{page_id}/script-batches/{batch_id}`. Batch generation requires Redis and a running Celery worker.
