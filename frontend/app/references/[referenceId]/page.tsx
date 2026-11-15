@@ -1,6 +1,7 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
+import Link from "next/link";
 import { authenticatedFetch } from "@/lib/supabase";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -57,13 +58,13 @@ export default function ReferencePostsPage() {
     <AppShell active="references">
       <main className="min-h-screen bg-transparent text-slate-100">
         <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-12">
-          <a href="/references" className="text-sm text-cyan-300 hover:text-cyan-200">← Back to references</a>
+          <Link href="/references" className="text-sm text-cyan-300 hover:text-cyan-200">← Back to references</Link>
           <header className="mt-5 mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold tracking-[0.28em] text-cyan-400">CONTENT INTELLIGENCE · R2</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Reference posts</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Collect permitted public post metadata and available interaction counts. No third-party video files are downloaded.</p>
-              <a href={`/references/${referenceId}/videos?pageId=${pageId}`} className="mt-3 inline-flex rounded-lg border border-cyan-300/20 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-300/10">Open video library →</a>
+              <Link href={`/references/${referenceId}/videos?pageId=${pageId}`} className="mt-3 inline-flex rounded-lg border border-cyan-300/20 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-300/10">Open video library →</Link>
             </div>
             <button onClick={() => void collect()} disabled={collecting || !pageId || !referenceId} className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50">{collecting ? "Collecting…" : "Collect latest posts"}</button>
           </header>
@@ -78,7 +79,7 @@ export default function ReferencePostsPage() {
           </div>
 
           <div className="mb-6 rounded-xl border border-amber-400/15 bg-amber-400/[0.04] p-4 text-xs leading-5 text-amber-100/80">
-            Performance index compares available reactions + comments + shares with the median of this reference Page's collected posts. It is not an engagement rate: competitor reach, impressions and watch time are not assumed to be available.
+            Performance index compares available reactions + comments + shares with the median of this reference Page&apos;s collected posts. It is not an engagement rate: competitor reach, impressions and watch time are not assumed to be available.
           </div>
 
           {loading ? <p className="py-12 text-center text-sm text-slate-500">Loading reference posts…</p> : posts.length === 0 ? (
