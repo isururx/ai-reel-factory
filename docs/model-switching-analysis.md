@@ -4,7 +4,7 @@
 
 The reference-video analysis pipeline uses Google Gemini only:
 1. Primary: `gemini-3.5-flash-lite`
-2. Fallback: `gemini-2.5-flash`
+2. Fallback: `gemini-3.8-flash`
 
 There are no NVIDIA NIM, Nemotron, Qwen, or other model integrations in this pipeline.
 
