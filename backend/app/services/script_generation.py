@@ -15,7 +15,8 @@ Create ONE polished, publication-ready draft for a 60–90 second English-langua
 Create a distinct script, not a list of alternatives. When batch context is provided, make this script meaningfully different from other scripts in the same batch while staying on the requested subject.
 
 SCRIPT REQUIREMENTS:
-- Narration: 120–170 words, natural and easy to perform as voice-over.
+- Narration target: 150–200 words, natural and easy to perform as voice-over.
+- Hard narration range: 130–210 words. Stay close to the target while prioritising clear, engaging storytelling.
 - Start with one compelling, specific hook.
 - Build a clear beginning, middle, and satisfying ending.
 - Use concrete, visual language that can be translated into shots.
@@ -38,7 +39,7 @@ Return ONLY valid JSON in exactly this shape:
 {{
   "title": "Clear editorial title",
   "hook": "The single opening hook",
-  "narration": "Complete 120–170 word voice-over script",
+  "narration": "Complete 150–200 word voice-over script",
   "caption": "Ready-to-publish social caption",
   "hashtags": ["#RelevantTag", "#AnotherTag"],
   "estimated_duration_seconds": 75,
@@ -52,7 +53,7 @@ Return ONLY valid JSON in exactly this shape:
   }}
 }}
 
-Before returning, verify narration is 120–170 words, scores are integers from 1 to 10, and hashtags is an array of strings. Return no Markdown fences or commentary.
+Before returning, verify narration is within the hard limit of 130–210 words (aim for 150–200), scores are integers from 1 to 10, and hashtags is an array of strings. Return no Markdown fences or commentary.
 
 PAGE PROFILE:
 {json.dumps(context["profile"], ensure_ascii=False)}
@@ -131,8 +132,8 @@ def generate_script(context: dict[str, Any]) -> dict[str, Any]:
                for key in ("title", "hook", "narration")):
         raise RuntimeError("The generated script is missing its title, hook, or narration.")
     narration_words = len(item["narration"].strip().split())
-    if not 120 <= narration_words <= 170:
-        raise RuntimeError(f"The narration must contain 120–170 words; received {narration_words}. Please regenerate.")
+    if not 130 <= narration_words <= 210:
+        raise RuntimeError(f"The narration must contain 130–210 words; received {narration_words}.")
 
     hashtags = item.get("hashtags", [])
     if not isinstance(hashtags, list) or any(not isinstance(tag, str) for tag in hashtags):
