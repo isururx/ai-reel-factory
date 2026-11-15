@@ -6,7 +6,7 @@ celery_app = Celery(
     "ai_reel_factory",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.reference_video_queue", "app.tasks.script_batches"],
+    include=["app.tasks.reference_video_queue", "app.tasks.script_batches", "app.tasks.video_generation"],
 )
 celery_app.conf.update(
     task_serializer="json",
