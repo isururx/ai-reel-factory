@@ -3,7 +3,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.auth import CurrentUser
-from app.core.settings import settings
 from app.database.session import get_db
 from app.models.content import ApprovalEvent, ContentScript, ScriptVersion
 from app.models.page import Page, PageProfile
@@ -89,7 +88,6 @@ def generate_script_for_page(
             script_data={
                 **item["script_data"],
                 "title": item["title"],
-                "generation_provider": settings.llm_provider,
                 "generation_brief": payload.brief,
             },
         )
