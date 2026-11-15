@@ -193,6 +193,7 @@ def decide_script(
     script.status = "approved" if payload.decision == "approved" else "rejected"
 
     video_job = None
+    created_video_job = False
     if payload.decision == "approved":
         video_job = db.scalar(select(VideoProductionJob).where(
             VideoProductionJob.script_version_id == version_id,
@@ -216,9 +217,10 @@ def decide_script(
             )
             db.add(video_job)
             db.flush()
+            created_video_job = True
     db.commit()
 
-    if video_job is not None and video_job.status == "queued":
+    if video_job is not None and created_video_job:
         try:
             render_video_job.delay(video_job.id)
         except Exception as exc:
